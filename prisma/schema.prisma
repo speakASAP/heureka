@@ -1,0 +1,65 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../shared/node_modules/.prisma/client"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+generator client_default {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Heureka Feed - Feed generation history
+model HeurekaFeed {
+  id            String           @id @default(uuid()) @db.Uuid
+  feedType      String           @db.VarChar(50) // heureka_cz, heureka_sk
+  feedUrl       String?          @db.VarChar(1000)
+  productCount  Int              @default(0)
+  status        String           @db.VarChar(50) // pending, generating, completed, failed
+  generatedAt   DateTime?
+  createdAt     DateTime         @default(now()) @db.Timestamp(6)
+  updatedAt     DateTime         @updatedAt @db.Timestamp(6)
+
+  @@index([feedType])
+  @@index([status])
+  @@map("heureka_feeds")
+}
+
+// Heureka Product - Products included in feed (linked to catalog)
+model HeurekaProduct {
+  id          String   @id @default(uuid()) @db.Uuid
+  productId   String   @db.Uuid // Catalog product ID (no FK - references catalog-microservice)
+  isIncluded Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamp(6)
+  updatedAt   DateTime @updatedAt @db.Timestamp(6)
+
+  @@unique([productId])
+  @@index([isIncluded])
+  @@map("heureka_products")
+}
+
+// Heureka Settings - Feed configuration
+model HeurekaSettings {
+  id            String   @id @default(uuid()) @db.Uuid
+  feedType      String   @unique @db.VarChar(50) // heureka_cz, heureka_sk
+  shopName      String   @db.VarChar(200)
+  shopUrl       String   @db.VarChar(500)
+  contactEmail  String   @db.VarChar(200)
+  contactPhone  String?  @db.VarChar(50)
+  deliveryDays  Int      @default(5)
+  deliveryPrice Decimal? @db.Decimal(10, 2)
+  freeDeliveryThreshold Decimal? @db.Decimal(10, 2)
+  currency      String   @default("CZK") @db.VarChar(3)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now()) @db.Timestamp(6)
+  updatedAt     DateTime @updatedAt @db.Timestamp(6)
+
+  @@index([feedType])
+  @@index([isActive])
+  @@map("heureka_settings")
+}
