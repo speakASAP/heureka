@@ -39,7 +39,7 @@ export class OrdersService {
       data,
     });
 
-    // Forward to order-microservice
+    // Forward to orders-microservice
     try {
       const centralOrder = await this.orderClient.createOrder({
         externalOrderId: order.heurekaOrderId,
@@ -66,9 +66,9 @@ export class OrdersService {
         },
       });
 
-      this.logger.log(`Order ${order.id} forwarded to order-microservice: ${centralOrder.id}`);
+      this.logger.log(`Order ${order.id} forwarded to orders-microservice: ${centralOrder.id}`);
     } catch (error: any) {
-      this.logger.error(`Failed to forward order to order-microservice: ${error.message}`);
+      this.logger.error(`Failed to forward order to orders-microservice: ${error.message}`);
     }
 
     return order;

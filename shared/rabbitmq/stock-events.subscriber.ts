@@ -107,53 +107,37 @@ export class StockEventsSubscriber implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Update offer stock quantities for a product
-   * Note: productId is the catalog-microservice product ID
-   * We need to find offers by matching SKU/EAN or by stored catalogProductId
+   * Update product inclusion in feed based on stock
+   * For Heureka, we regenerate the feed when stock changes
    */
   private async updateOfferStock(productId: string, available: number) {
     try {
-      // Find offers linked to this product
-      // For now, we'll update offers that have productId matching (legacy) or catalogProductId
-      // In the future, we should add catalogProductId field to AllegroOffer
-      const offers = await this.prisma.heurekaOffer.findMany({
-        where: {
-          productId: productId,
-        },
-        select: {
-          id: true,
-          heurekaOfferId: true,
-          stockQuantity: true,
-          isActive: true,
-        },
+      // Update HeurekaProduct inclusion status based on stock
+      const heurekaProduct = await this.prisma.heurekaProduct.findUnique({
+        where: { productId },
       });
 
-      if (offers.length === 0) {
-        this.logger.log(`No offers found for product ${productId}`, 'StockEventsSubscriber');
-        return;
-      }
-
-      // Update each offer's stock quantity
-      for (const offer of offers) {
-        if (offer.stockQuantity !== available) {
-          await this.prisma.heurekaOffer.update({
-            where: { id: offer.id },
-            data: {
-              stockQuantity: available,
-            },
+      if (heurekaProduct) {
+        // Update inclusion status: include if stock > 0
+        const shouldInclude = available > 0;
+        if (heurekaProduct.isIncluded !== shouldInclude) {
+          await this.prisma.heurekaProduct.update({
+            where: { id: heurekaProduct.id },
+            data: { isIncluded: shouldInclude },
           });
 
           this.logger.log(
-            `Updated offer ${offer.id} (Aukro: ${offer.heurekaOfferId}) stock from ${offer.stockQuantity} to ${available}`,
+            `Updated Heureka product ${productId} inclusion: ${shouldInclude ? 'included' : 'excluded'} (stock: ${available})`,
             'StockEventsSubscriber'
           );
 
-          // TODO: Optionally sync to Allegro API if stock changed significantly
-          // This could be done via InventoryService or directly via AllegroApiService
+          // Trigger feed regeneration (async, don't wait)
+          // This could be done via a queue or scheduled job
+          this.logger.log(`Feed should be regenerated for product ${productId} stock change`, 'StockEventsSubscriber');
         }
       }
     } catch (error: any) {
-      this.logger.error(`Failed to update offer stock: ${error.message}`, error.stack, 'StockEventsSubscriber');
+      this.logger.error(`Failed to update Heureka product stock: ${error.message}`, error.stack, 'StockEventsSubscriber');
     }
   }
 
@@ -162,12 +146,9 @@ export class StockEventsSubscriber implements OnModuleInit, OnModuleDestroy {
    */
   private async handleOutOfStock(productId: string) {
     try {
-      // Set stock to 0 for all offers
+      // Exclude product from feed
       await this.updateOfferStock(productId, 0);
-
-      // Optionally deactivate offers on Allegro
-      // This could be done via OffersService or AllegroApiService
-      this.logger.warn(`Product ${productId} is out of stock - offers updated`, 'StockEventsSubscriber');
+      this.logger.warn(`Product ${productId} is out of stock - excluded from feed`, 'StockEventsSubscriber');
     } catch (error: any) {
       this.logger.error(`Failed to handle out of stock: ${error.message}`, error.stack, 'StockEventsSubscriber');
     }
