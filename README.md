@@ -12,9 +12,9 @@ The Heureka Service generates XML feeds in Heureka format for price comparison p
 
 | Service | Subdomain | Port |
 | ------- | --------- | ---- |
-| heureka-service | heureka.statex.cz | 3800 |
-| api-gateway | heureka.statex.cz | 3801 |
-| gateway-proxy | heureka.statex.cz | 3804 |
+| heureka-service | heureka.alfares.cz | 3800 |
+| api-gateway | heureka.alfares.cz | 3801 |
+| gateway-proxy | heureka.alfares.cz | 3804 |
 
 ## Features
 
@@ -40,7 +40,7 @@ Database: `heureka_db`
 
 ## API Endpoints
 
-Base URL: `https://heureka.statex.cz/api` (or `http://localhost:3801/api` in dev)
+Base URL: `https://heureka.alfares.cz/api` (or `http://localhost:3801/api` in dev)
 
 - `GET /api/feed` - Generate and return XML feed
 - `GET /api/feed/download` - Download feed file

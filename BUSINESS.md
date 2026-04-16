@@ -18,5 +18,5 @@ flipflop-service (feed submission to Heureka).
 
 ## SLA
 
-- Production: <https://heureka.statex.cz>
+- Production: <https://heureka.alfares.cz>
 - Events: subscribes to stock.updated
