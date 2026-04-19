@@ -7,8 +7,11 @@ RUN npm install --prefer-offline --no-audit || npm ci
 
 COPY . .
 
-# Build aukro-service from monorepo and use its dist (ignore TS errors)
-RUN cd services/aukro-service && npm install --prefer-offline --no-audit && npm run build 2>&1 | tail -5; cd ../.. && cp -r services/aukro-service/dist ./dist 2>/dev/null || true
+# Install root dependencies first (needed for file: symlinks)
+RUN npm install --prefer-offline --no-audit
+
+WORKDIR /app/services/aukro-service
+RUN npm run build && cd /app && cp -r services/aukro-service/dist ./dist
 
 EXPOSE 3000
 
