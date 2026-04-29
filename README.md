@@ -1,76 +1,39 @@
-# Heureka Service
+# heureka-service
 
-Heureka.cz/sk XML feed generation service for the unified e-commerce platform.
+Heureka.cz/sk XML feed generation service.
 
-## Overview
+**Domain**: https://heureka.alfares.cz  
+**Stack**: NestJS · PostgreSQL · Kubernetes (`statex-apps`)  
+**Port**: 3000 (ClusterIP)
 
-The Heureka Service generates XML feeds in Heureka format for price comparison platforms. It uses central microservices (catalog, warehouse) as the single source of truth.
+## API
 
-## Port Configuration
+Base: `https://heureka.alfares.cz/api`
 
-**Port Range**: 38xx
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/feed` | Generate and return XML feed |
+| GET | `/api/feed/download` | Download feed file |
+| POST | `/api/feed/regenerate` | Manually regenerate feed |
+| GET | `/api/products` | List products in feed |
+| POST | `/api/products/:id/include` | Include product |
+| DELETE | `/api/products/:id/exclude` | Exclude product |
+| GET | `/api/settings` | Get feed settings |
+| PUT | `/api/settings` | Update feed settings |
 
-| Service | Subdomain | Port |
-| ------- | --------- | ---- |
-| heureka-service | heureka.alfares.cz | 3800 |
-| api-gateway | heureka.alfares.cz | 3801 |
-| gateway-proxy | heureka.alfares.cz | 3804 |
+## Feed format
 
-## Features
+Heureka XML schema — validate with `curl https://heureka.alfares.cz/feed.xml | xmllint --noout -`
 
-- Generate Heureka XML feed from catalog products
-- Subscribe to `stock.updated` events → regenerate feed
-- Support multiple feed types (Heureka.cz, Heureka.sk)
-- Store feed generation history
+## Secrets
 
-## Architecture
+All secrets in Vault at `secret/prod/heureka-service` → ESO → K8s Secret `heureka-service-secret`.  
+→ [VAULT.md](../shared/docs/VAULT.md)
 
-- Uses `catalog-microservice` (3200) for product data
-- Uses `warehouse-microservice` (3201) for stock levels
-- Subscribes to RabbitMQ `stock.updated` events
+## Architecture · Deployment · Ops
 
-## Database
+→ [SYSTEM.md](SYSTEM.md)
 
-Database: `heureka_db`
+## Business rules · Constraints
 
-**Tables**:
-- `HeurekaFeed` - Feed generation history
-- `HeurekaProduct` - Products included in feed
-- `HeurekaSettings` - Feed configuration
-
-## API Endpoints
-
-Base URL: `https://heureka.alfares.cz/api` (or `http://localhost:3801/api` in dev)
-
-- `GET /api/feed` - Generate and return XML feed
-- `GET /api/feed/download` - Download feed file
-- `POST /api/feed/regenerate` - Manually regenerate feed
-- `GET /api/products` - List products in feed
-- `POST /api/products/:productId/include` - Include product in feed
-- `DELETE /api/products/:productId/exclude` - Exclude product from feed
-- `GET /api/settings` - Get feed settings
-- `PUT /api/settings` - Update feed settings
-
-## Feed Format
-
-Heureka XML format (https://sluzby.heureka.cz/napoveda/xml-feed/)
-
-## Environment Variables
-
-See `.env.example` for required environment variables.
-
-## Deployment
-
-Deploy using `nginx-microservice/scripts/blue-green/deploy-smart.sh`:
-
-```bash
-cd /home/statex/heureka-service
-./nginx-microservice/scripts/blue-green/deploy-smart.sh
-```
-
-## Development
-
-```bash
-npm run start:dev
-```
-
+→ [BUSINESS.md](BUSINESS.md)
