@@ -7,7 +7,7 @@ NestJS · PostgreSQL · Kubernetes (statex-apps namespace)
 ## Deployment
 
 **Mode:** Kubernetes (k3s, `statex-apps` namespace)  
-**Deploy:** `kubectl apply -f k8s/` — do NOT use `deploy.sh` or blue/green scripts  
+**Deploy:** `./scripts/deploy.sh` (builds image, pushes to registry, triggers rollout)  
 **Image:** `localhost:5000/heureka-service:latest`  
 **Port:** 3000 (ClusterIP) → ingress → `heureka.alfares.cz`
 
