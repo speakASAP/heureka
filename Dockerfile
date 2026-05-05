@@ -11,25 +11,25 @@ RUN npm ci && npm run build
 
 # Copy service files and dependencies
 WORKDIR /app
-COPY services/aukro-service ./services/aukro-service
+COPY services/heureka-service ./services/heureka-service
 COPY tsconfig.json ./
 COPY package*.json ./
 COPY prisma ./prisma
 
 # Install service dependencies (which reference shared via file://)
-WORKDIR /app/services/aukro-service
+WORKDIR /app/services/heureka-service
 RUN npm install
 
-# Generate Prisma client from shared dir (prisma@5.22.0 matches @prisma/client@5.22.0 in lockfile)
+# Generate Prisma client from repo root to avoid prisma CLI attempting implicit package installs in /app/shared
 # Output path in schema is ../shared/node_modules/.prisma/client (relative to /app/prisma/) = /app/shared/node_modules/.prisma/client
-WORKDIR /app/shared
-RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" \
-    ./node_modules/.bin/prisma generate --schema=/app/prisma/schema.prisma
+WORKDIR /app
+RUN npm install --prefix /app/shared --save-dev prisma@5.22.0 --silent
+RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"     ./shared/node_modules/.bin/prisma generate --schema=prisma/schema.prisma
 # Fix: Copy generated client into the service's node_modules/.prisma/client so @prisma/client resolves the real client
-RUN cp -r /app/shared/node_modules/.prisma/client/. /app/services/aukro-service/node_modules/.prisma/client/
+RUN cp -r /app/shared/node_modules/.prisma/client/. /app/services/heureka-service/node_modules/.prisma/client/
 
 # Build service
-WORKDIR /app/services/aukro-service
+WORKDIR /app/services/heureka-service
 RUN npm run build
 
 # Production stage - copy only what's needed
@@ -41,8 +41,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -
 WORKDIR /app
 
 # Copy service dist and node_modules
-COPY --from=builder /app/services/aukro-service/dist ./dist
-COPY --from=builder /app/services/aukro-service/node_modules ./node_modules
+COPY --from=builder /app/services/heureka-service/dist ./dist
+COPY --from=builder /app/services/heureka-service/node_modules ./node_modules
 
 # Copy entire shared package (source + compiled dist + node_modules for @heureka/shared)
 COPY --from=builder /app/shared ./shared
