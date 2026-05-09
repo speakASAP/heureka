@@ -1,4 +1,4 @@
-# Multi-stage build for Allegro Service
+# Multi-stage build for Heureka backend (K8s / compose)
 FROM node:24-slim AS builder
 
 WORKDIR /app
@@ -25,14 +25,14 @@ RUN npm run build
 
 # Copy service files
 WORKDIR /app
-COPY services/aukro-service/package*.json ./services/aukro-service/
-COPY services/aukro-service/tsconfig.json ./services/aukro-service/
-COPY services/aukro-service/src ./services/aukro-service/src
+COPY services/heureka-service/package*.json ./services/heureka-service/
+COPY services/heureka-service/tsconfig.json ./services/heureka-service/
+COPY services/heureka-service/src ./services/heureka-service/src
 COPY tsconfig.json ./
 COPY package*.json ./
 
 # Install dependencies and build
-WORKDIR /app/services/aukro-service
+WORKDIR /app/services/heureka-service
 RUN npm ci
 RUN npm run build
 
@@ -48,17 +48,17 @@ WORKDIR /app
 COPY --from=builder /app/shared ./shared
 
 # Copy service files maintaining directory structure for file: references
-COPY --from=builder /app/services/aukro-service ./services/aukro-service
+COPY --from=builder /app/services/heureka-service ./services/heureka-service
 
 # Copy root package.json for shared dependencies
 COPY --from=builder /app/package*.json ./
 
-WORKDIR /app/services/aukro-service
+WORKDIR /app/services/heureka-service
 
-EXPOSE 3700
+EXPOSE 3800
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3700/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD node -e "require('http').get('http://localhost:3800/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 CMD ["node", "dist/main.js"]
 

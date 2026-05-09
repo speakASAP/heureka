@@ -256,6 +256,7 @@ export class GatewayService implements OnModuleInit {
 
     this.serviceUrls = {
       heureka: getServiceUrl('HEUREKA_SERVICE_URL', 'HEUREKA_SERVICE_PORT', 'heureka'),
+      aukro: getServiceUrl('AUKRO_SERVICE_URL', 'AUKRO_SERVICE_PORT', 'aukro'),
       import: getServiceUrl('IMPORT_SERVICE_URL', 'IMPORT_SERVICE_PORT', 'import'),
       settings: getServiceUrl('SETTINGS_SERVICE_URL', 'HEUREKA_SETTINGS_SERVICE_PORT', 'settings'),
       // In development, use localhost (via SSH tunnel) if AUTH_SERVICE_PORT is set or AUTH_SERVICE_URL is localhost
@@ -339,6 +340,14 @@ export class GatewayService implements OnModuleInit {
   }
 
   /**
+   * Paths served by the heureka-feed microservice (XML feed). All other /heureka/* API traffic goes to aukro-service.
+   */
+  isHeurekaFeedBackendPath(fullPath: string): boolean {
+    const pathOnly = fullPath.split('?')[0];
+    return pathOnly === '/heureka/feed' || pathOnly.startsWith('/heureka/feed/');
+  }
+
+  /**
    * Warm up a single service connection by making a health check request
    * If baseUrl is gateway-proxy, use the correct Nginx route path
    */
@@ -357,6 +366,8 @@ export class GatewayService implements OnModuleInit {
         healthUrl = `${baseUrl}/settings/health`;
       } else if (serviceName === 'import') {
         healthUrl = `${baseUrl}/import/health`;
+      } else if (serviceName === 'aukro') {
+        healthUrl = `${baseUrl}/aukro/health`;
       } else {
         healthUrl = `${baseUrl}/health`;
       }
@@ -478,7 +489,7 @@ export class GatewayService implements OnModuleInit {
     const isHttps = url.startsWith('https://');
 
     // Determine if this is an internal Docker service or external service
-    const isInternalService = ['heureka', 'import', 'settings'].includes(serviceName);
+    const isInternalService = ['heureka', 'aukro', 'import', 'settings'].includes(serviceName);
     const isExternalService = serviceName === 'auth' && isHttps;
 
     // Generate request ID for tracking (must be before config to use in metadata)

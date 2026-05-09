@@ -12,6 +12,7 @@ services:
       - nginx-network
     depends_on:
       - heureka
+      - aukro
       - settings
       - imports
     restart: unless-stopped
@@ -37,6 +38,8 @@ services:
       - SERVICE_NAME=${SERVICE_NAME:-heureka-service}
       - API_GATEWAY_PORT=${API_GATEWAY_PORT:-3801}
       - HEUREKA_SERVICE_URL=${HEUREKA_SERVICE_URL:-http://heureka:3800}
+      - AUKRO_SERVICE_URL=${AUKRO_SERVICE_URL:-http://aukro:3700}
+      - AUKRO_SERVICE_PORT=${AUKRO_SERVICE_PORT:-3700}
       - IMPORT_SERVICE_URL=${IMPORT_SERVICE_URL:-http://imports:3802}
       - SETTINGS_SERVICE_URL=${SETTINGS_SERVICE_URL:-http://settings:3803}
       - HEUREKA_SETTINGS_SERVICE_PORT=${HEUREKA_SETTINGS_SERVICE_PORT:-3803}
@@ -67,6 +70,41 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3801/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Aukro marketplace API — build from sibling repo (clone aukro-service next to heureka-service)
+  aukro:
+    build:
+      context: ../aukro-service
+      dockerfile: Dockerfile
+    container_name: heureka-stack-aukro-green
+    ports:
+      - "${AUKRO_SERVICE_PORT:-3700}:3700"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - SERVICE_NAME=${SERVICE_NAME_AUKRO:-aukro-service}
+      - AUKRO_SERVICE_PORT=${AUKRO_SERVICE_PORT:-3700}
+      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - LOGGING_SERVICE_URL=${LOGGING_SERVICE_URL}
+      - CATALOG_SERVICE_URL=${CATALOG_SERVICE_URL:-http://catalog-microservice:3200}
+      - WAREHOUSE_SERVICE_URL=${WAREHOUSE_SERVICE_URL:-http://warehouse-microservice:3201}
+      - ORDER_SERVICE_URL=${ORDER_SERVICE_URL:-http://orders-microservice:3203}
+      - RABBITMQ_URL=${RABBITMQ_URL:-amqp://guest:guest@statex_rabbitmq:5672}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${AUKRO_DB_NAME:-aukro}
+      - DATABASE_URL=${AUKRO_DATABASE_URL:-${DATABASE_URL}}
+    networks:
+      - nginx-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3700/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
       timeout: 10s
       retries: 3

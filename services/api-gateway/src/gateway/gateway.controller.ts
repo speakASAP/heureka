@@ -52,8 +52,8 @@ export class GatewayController {
     try {
       // Don't follow redirects - we want to handle them ourselves
       const response = await this.gatewayService.forwardRequest(
-        'heureka',
-        `/heureka${path}`,
+        'aukro',
+        `/aukro${path}`,
         method,
         undefined,
         this.getHeaders(req),
@@ -95,13 +95,17 @@ export class GatewayController {
   }
 
   /**
-   * Route heureka requests (requires auth)
+   * Route legacy /api/heureka/* paths: feed → heureka-feed service; API → aukro-service (/aukro/*).
    */
   @All('heureka/*')
   @UseGuards(JwtAuthGuard)
   async heurekaRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
     const path = req.url.replace('/api/heureka', '');
-    return this.routeRequest('heureka', `/heureka${path}`, req, res);
+    const upstream = `/heureka${path}`;
+    const serviceName = this.gatewayService.isHeurekaFeedBackendPath(upstream) ? 'heureka' : 'aukro';
+    const backendPath =
+      serviceName === 'aukro' ? upstream.replace(/^\/heureka/, '/aukro') : upstream;
+    return this.routeRequest(serviceName, backendPath, req, res);
   }
 
   /**

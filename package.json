@@ -1,7 +1,7 @@
 {
   "name": "heureka-service",
   "version": "1.0.0",
-  "description": "Aukro.cz sales channel service - marketplace integration",
+  "description": "Heureka feed stack: XML feeds, api-gateway, settings; Aukro API runs from aukro-service repo",
   "private": true,
   "scripts": {
     "start:dev": "concurrently -n \"API-GW,HEUREKA\" -c \"blue,yellow\" \"cd services/api-gateway && npm run start:dev\" \"cd services/heureka-service && npm run start:dev\""
