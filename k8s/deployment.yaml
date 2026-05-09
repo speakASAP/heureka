@@ -24,9 +24,9 @@ spec:
       containers:
         - name: app
           image: localhost:5000/heureka-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
-            - containerPort: 3000
+            - containerPort: 3800
           envFrom:
             - configMapRef:
                 name: heureka-config
@@ -39,7 +39,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /health
-              port: 3000
+              port: 3800
             initialDelaySeconds: 15
             periodSeconds: 30
             failureThreshold: 3
@@ -47,7 +47,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /health
-              port: 3000
+              port: 3800
             initialDelaySeconds: 10
             periodSeconds: 10
             failureThreshold: 3

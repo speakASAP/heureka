@@ -28,7 +28,10 @@ async function bootstrap() {
     exclude: [{ path: 'health', method: RequestMethod.GET }],
   });
 
-  const port = configService.get<string>('HEUREKA_SERVICE_PORT') || '3800';
+  const port =
+    configService.get<string>('HEUREKA_SERVICE_PORT') ||
+    configService.get<string>('PORT') ||
+    '3800';
   await app.listen(parseInt(port, 10));
   console.log(`Heureka feed service listening on http://localhost:${port}`);
 }

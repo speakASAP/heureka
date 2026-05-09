@@ -12,6 +12,6 @@ spec:
     app: heureka-service
   ports:
     - protocol: TCP
-      port: 3000
-      targetPort: 3000
+      port: 3800
+      targetPort: 3800
       name: app
