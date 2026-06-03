@@ -42,7 +42,7 @@ kubectl annotate externalsecret heureka-service-secret force-sync=$(date +%s) -n
 
 | Service | Address | Usage |
 |---------|---------|-------|
-| database-server | 192.168.88.53:5432 | PostgreSQL (`heureka` DB) |
+| database-server | db-server-postgres.statex-apps.svc.cluster.local:5432 | PostgreSQL (`heureka` DB) |
 | logging-microservice | :3367 | Structured logs |
 | catalog-microservice | :3200 | Product data |
 | warehouse-microservice | :3201 | `stock.updated` events |
