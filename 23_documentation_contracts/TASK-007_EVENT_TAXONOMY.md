@@ -2,10 +2,10 @@
 
 ```yaml
 id: TASK-007-EVENT-TAXONOMY
-status: draft
-owner: Agent F
+status: reconciled
+owner: Project Owner
 created: 2026-06-13
-last_updated: 2026-06-13
+last_updated: 2026-06-15
 data_classification: synthetic
 source_task: ../11_tasks/TASK-007-plan-growth-analytics-and-demand-loops.md
 execution_plan: ../21_execution_plans/EP-TASK-007-plan-growth-analytics-and-demand-loops.md
@@ -15,7 +15,7 @@ sensitive_data_policy: ../23_documentation_contracts/SENSITIVE_DATA_POLICY.md
 
 ## Purpose
 
-Define the draft redacted event taxonomy for TASK-007 so feed lifecycle, readiness, submission, demand segment, lead candidate, and digest events can be reviewed without exposing secrets, raw production records, customer identifiers, internal cost, margin, or supplier private values.
+Define the reconciled redacted event taxonomy for TASK-007 so feed lifecycle, readiness, submission, demand segment, lead candidate, and digest events can be reviewed without exposing secrets, raw production records, customer identifiers, internal cost, margin, or supplier private values.
 
 This document is contract-only. It does not approve runtime event emission, marketing writes, lead writes, schema migrations, external service writes, or production data export.
 
@@ -37,18 +37,18 @@ Vision -> Goal Impact -> System -> Feature -> Task -> Execution Plan -> Coding P
 
 ## Vocabulary Readiness
 
-The following names are draft coordination terms only:
+The following names are reconciled against the currently published TASK-002, TASK-003, and TASK-004 contracts where available. Submission and external demand names remain contract-gated.
 
 | Vocabulary area | Current draft values | Status | Dependency |
 |---|---|---|---|
-| Feed lifecycle stages | `prepare`, `validate`, `persist`, `expose`, `failed` | Provisional | Agent A / TASK-002 final lifecycle contract |
-| Feed lifecycle statuses | `valid`, `invalid`, `stale`, `generating`, `failed`, `missing` | Provisional | Agent A / TASK-002 final status contract |
-| Policy result codes | `xml_invalid`, `zero_stock_evidence_invalid`, `sensitive_field_detected`, `generation_sla_exceeded` | Provisional | Agent B / TASK-003 policy vocabulary |
-| Readiness blocker codes | `missing_required_field`, `category_unmapped`, `media_missing`, `price_missing_or_invalid`, `stock_unavailable`, `feed_stale` | Provisional | Agent C / TASK-004 readiness vocabulary |
+| Feed lifecycle stages | `prepare`, `validate`, `persist`, `expose`, `failed` | Published | TASK-002 `FeedLifecycleStage` |
+| Feed lifecycle statuses | `valid`, `invalid`, `stale`, `generating`, `failed`, `missing` | Published | TASK-002 `FeedLifecycleStatus` |
+| Policy/finding codes | `XML_ENVELOPE_INVALID`, `XML_TEXT_UNESCAPED`, `ZERO_STOCK_INCLUDED`, `PRODUCT_COUNT_MISMATCH`, `GENERATION_SLA_EXCEEDED`, `SENSITIVE_FIELD_EXPOSED`, `CATALOG_FETCH_PARTIAL` | Published | TASK-003 lifecycle/policy implementation |
+| Readiness blocker codes | `PRODUCT_NOT_FOUND`, `PRODUCT_INACTIVE`, `MISSING_PRODUCT_NAME`, `MISSING_DESCRIPTION`, `MISSING_CATEGORY`, `MISSING_PRIMARY_IMAGE`, `INVALID_IMAGE_URL`, `PRICE_MISSING`, `PRICE_NOT_POSITIVE`, `ZERO_STOCK`, `STOCK_UNKNOWN`, `SETTINGS_INACTIVE`, `XML_RENDER_INVALID`, `SENSITIVE_FIELD_EXPOSURE`, `GENERATION_SLA_RISK` | Published | TASK-004 readiness implementation |
 | Submission outcomes | `accepted`, `rejected`, `delayed`, `unknown` | Provisional | Flipflop submission contract review |
 | Demand segment names | `feed_ready_growth_candidate`, `readiness_blocker_cluster`, `stale_feed_risk`, `zero_stock_recovery_opportunity`, `submission_rejection_followup` | Draft | Contract validation and data-safety review |
 
-Final event names must not be frozen until TASK-002 lifecycle/status names and TASK-003/TASK-004 blocker vocabularies are published.
+Lifecycle, policy, and readiness event payload vocabularies are now aligned to TASK-002, TASK-003, and TASK-004. Submission, demand segment, digest sink, marketing, and leads vocabularies remain contract-gated.
 
 ## Common Event Envelope
 
@@ -83,14 +83,14 @@ Allowed examples use placeholders such as `FEED_RUN_SYNTHETIC_001`, `PRODUCT_REF
 
 | Event name | Purpose | Producer | Consumer class | Status |
 |---|---|---|---|---|
-| `heureka.feed.prepare.v1` | Feed generation preparation started or completed. | Feed lifecycle | Logging/notifications | Provisional lifecycle name. |
-| `heureka.feed.validate.v1` | Validation snapshot produced for a generated feed. | Feed lifecycle / policy | Logging/notifications, analytics | Provisional lifecycle/policy name. |
-| `heureka.feed.generated.v1` | Public-safe feed artifact generated and ready for exposure. | Feed lifecycle | Logging/notifications, analytics | Provisional lifecycle name. |
-| `heureka.feed.invalid.v1` | Feed failed validation and must not be served or submitted. | Feed lifecycle / policy | Logging/notifications, analytics | Provisional policy name. |
-| `heureka.feed.stale.v1` | Latest feed exceeded freshness threshold. | Feed lifecycle | Logging/notifications, analytics | Provisional status name. |
+| `heureka.feed.prepare.v1` | Feed generation preparation started or completed. | Feed lifecycle | Logging/notifications | Aligned to TASK-002 lifecycle vocabulary. |
+| `heureka.feed.validate.v1` | Validation snapshot produced for a generated feed. | Feed lifecycle / policy | Logging/notifications, analytics | Aligned to TASK-002/TASK-003 lifecycle and policy vocabulary. |
+| `heureka.feed.generated.v1` | Public-safe feed artifact generated and ready for exposure. | Feed lifecycle | Logging/notifications, analytics | Aligned to TASK-002 lifecycle vocabulary. |
+| `heureka.feed.invalid.v1` | Feed failed validation and must not be served or submitted. | Feed lifecycle / policy | Logging/notifications, analytics | Aligned to TASK-002/TASK-003 lifecycle and policy vocabulary. |
+| `heureka.feed.stale.v1` | Latest feed exceeded freshness threshold. | Feed lifecycle | Logging/notifications, analytics | Aligned to TASK-002 status vocabulary. |
 | `heureka.feed.submission_status.v1` | Flipflop submission result or handoff status recorded. | Submission integration | Logging/notifications, analytics | Contract-gated. |
-| `heureka.product.readiness_blocked.v1` | Product or aggregate product set has readiness blockers. | Readiness | Catalog, analytics | Provisional readiness name. |
-| `heureka.product.excluded_zero_stock.v1` | Zero-stock exclusion counted for feed safety. | Feed lifecycle/readiness | Analytics | Provisional readiness/policy name. |
+| `heureka.product.readiness_blocked.v1` | Product or aggregate product set has readiness blockers. | Readiness | Catalog, analytics | Aligned to TASK-004 readiness vocabulary. |
+| `heureka.product.excluded_zero_stock.v1` | Zero-stock exclusion counted for feed safety. | Feed lifecycle/readiness | Analytics | Aligned to TASK-003/TASK-004 zero-stock vocabulary. |
 | `heureka.demand.segment_candidate.v1` | Public-safe aggregate demand segment candidate produced. | Analytics | Leads/marketing after review | Blocked from writes. |
 | `heureka.digest.marketplace_daily.v1` | Daily public-safe digest of feed health and demand signals. | Analytics digest | Operators, dashboards | Blocked until validation. |
 
@@ -165,7 +165,7 @@ data:
   feed_run_ref: FEED_RUN_SYNTHETIC_001
   validation_snapshot_hash: sha256:<synthetic-hash>
   policy_result_codes:
-    - xml_invalid
+    - XML_ENVELOPE_INVALID
   severity: error
   remediation_keys:
     - feed.xml.envelope.fix
@@ -212,8 +212,8 @@ data:
   product_ref_hash: sha256:<synthetic-hash>
   blocked_count: 1
   blocker_codes:
-    - category_unmapped
-  owner_service: catalog-microservice
+    - MISSING_CATEGORY
+  owner_service: catalog-service
   remediation_keys:
     - catalog.category.map_for_heureka
   readiness_snapshot_hash: sha256:<synthetic-hash>
@@ -285,7 +285,7 @@ Before runtime implementation, TASK-007 must add or update validation that prove
 - examples are synthetic and contain no secrets, raw production records, customer identifiers, internal cost, margin, or supplier private values;
 - idempotency keys and snapshot hashes are stable for fixed synthetic input;
 - marketing and leads writes remain disabled until contract validation and data-safety review pass;
-- lifecycle/status names are reconciled with TASK-002 and blocker vocabulary is reconciled with TASK-003/TASK-004.
+- lifecycle/status names remain aligned with TASK-002 and blocker vocabulary remains aligned with TASK-003/TASK-004 before any runtime emission.
 
 ## Parallel Execution
 
@@ -293,8 +293,8 @@ Before runtime implementation, TASK-007 must add or update validation that prove
 |---|---|---|---|
 | Event taxonomy draft | Ready now | This document and validation report only. | Common event envelope and event catalog. |
 | Payload safety | Ready now | Redaction rules, forbidden fields, synthetic examples. | Sensitive-data policy. |
-| Lifecycle alignment | Dependency-gated | Replace provisional lifecycle names when Agent A publishes final contract. | TASK-002 lifecycle/status names. |
-| Policy/readiness alignment | Dependency-gated | Replace provisional policy/readiness codes when Agents B/C publish final vocabulary. | TASK-003/TASK-004 blocker vocabulary. |
+| Lifecycle alignment | Completed for documentation | Uses TASK-002 lifecycle/status names. | TASK-002 lifecycle/status names. |
+| Policy/readiness alignment | Completed for documentation | Uses TASK-003 policy/finding codes and TASK-004 readiness blocker codes. | TASK-003/TASK-004 blocker vocabulary. |
 | Demand segment writes | Blocked | Leads/marketing writes and external sink integration. | Contract validation plus data-safety review. |
 | Final integration | Final integration | Runtime emission, sink routing, replay tests, deployment readiness. | Integration owner must reconcile all above contracts. |
 
@@ -304,7 +304,6 @@ Merge order: lifecycle/status contract, policy/readiness vocabulary, payload val
 
 ## Blocked Items
 
-- Final event names are blocked on TASK-002 lifecycle/status and TASK-003/TASK-004 blocker vocabulary.
 - Marketing and leads writes are blocked until contract validation and data-safety review pass.
 - Submission status payloads are blocked until the flipflop submission contract is reviewed.
 - Runtime event emission is blocked until a reviewed TASK-007 coding prompt exists and gates pass.

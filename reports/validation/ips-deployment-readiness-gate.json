@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-06-15T11:49:05Z",
+  "created_at": "2026-06-15T11:55:09Z",
   "gate": "deployment_readiness",
   "next_step": "ready_for_deployment_review",
   "pre_coding_gate": {
@@ -19,7 +19,7 @@
     "score": 100,
     "status": "PASS"
   },
-  "target": "TASK-004",
+  "target": "TASK-007",
   "unresolved_markers": [
     {
       "line": 35,
@@ -152,19 +152,18 @@
       "path": "AGENT_OPERATIONS.md"
     },
     {
-      "line": 48,
+      "line": 47,
       "marker": "[MISSING: ...]",
       "path": "PLAN.md"
     },
     {
-      "line": 48,
+      "line": 47,
       "marker": "[UNKNOWN: ...]",
       "path": "PLAN.md"
     }
   ],
   "validation_reports": {
     "matching_reports": [
-      "12_validation/VAL-TASK-004.md",
       "12_validation/VAL-TASK-007.md"
     ],
     "reports": [
@@ -178,6 +177,6 @@
       "12_validation/VAL-TASK-008.md"
     ],
     "status": "pass",
-    "target": "TASK-004"
+    "target": "TASK-007"
   }
 }

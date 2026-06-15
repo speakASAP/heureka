@@ -19,7 +19,7 @@ Coordinator integration on 2026-06-15 accepted `TASK-004` as a read-only catalog
 | TASK-004 catalog feed readiness action | Implemented and validated | `23_documentation_contracts/CATALOG_FEED_READINESS_CONTRACT.md`, `12_validation/VAL-TASK-004.md`, `services/heureka-service/src/heureka/feed/feed-readiness.ts` | Read-only single-product and bulk readiness endpoints are available; future persistence/events require new approval. |
 | TASK-005 AI feed optimization contract | Contract-defined, runtime-blocked | `23_documentation_contracts/AI_FEED_OPTIMIZATION_CONTRACT.md`, `12_validation/VAL-TASK-005.md` | Human review must approve any AI-influenced mutation path; schema/storage ownership must be assigned before coding. |
 | TASK-006 stock/order/profit feedback loop | Boundary-prepared, external-contract-blocked | `16_operations/INTEGRATIONS.md`, `12_validation/VAL-TASK-006.md` | Warehouse, flipflop, orders, payments, and supplier owners must approve read-only contracts with redaction/replay rules. |
-| TASK-007 growth analytics and demand loops | Event-taxonomy drafted, runtime-blocked | `23_documentation_contracts/TASK-007_EVENT_TAXONOMY.md`, `12_validation/VAL-TASK-007.md` | Reconcile final names after TASK-002/TASK-003/TASK-004 review; add contract tests before emission or marketing/leads writes. |
+| TASK-007 growth analytics and demand loops | Event-taxonomy reconciled, runtime-blocked | `23_documentation_contracts/TASK-007_EVENT_TAXONOMY.md`, `12_validation/VAL-TASK-007.md` | Add contract tests and reviewed coding prompt before runtime emission or marketing/leads writes. |
 | TASK-008 operations trust and scale | Operations evidence drafted, runtime-blocked | `16_operations/OPS-TASK-008-operations-trust-and-scale.md`, `12_validation/VAL-TASK-008.md` | Approve probe cadence, rollback procedure, synthetic scale dataset sizes, and implementation prompt before runtime probes. |
 
 ## Next Goal Queue
@@ -28,13 +28,12 @@ Coordinator integration on 2026-06-15 accepted `TASK-004` as a read-only catalog
 |---|---|---|---|---|---|---|---|
 | 2 | Review `TASK-005` AI suggestion contract for human-review and storage boundaries. | AI/data-safety reviewer | Ready now and independent of TASK-004 runtime coding | `23_documentation_contracts/AI_FEED_OPTIMIZATION_CONTRACT.md`, `21_execution_plans/EP-TASK-005-define-ai-feed-optimization-contract.md`, `12_validation/VAL-TASK-005.md` | Public XML mutation paths, schemas, runtime services, production prompts | Contract marker checks plus gate rerun for TASK-005 | Keep AI output advisory only unless a later owner-approved prompt names schema and review-state files. |
 | 3 | Resolve `TASK-006` external read-only contract blockers. | External service owners | Ready for review, dependency-gated for implementation | `16_operations/INTEGRATIONS.md`, `21_execution_plans/EP-TASK-006-plan-stock-order-profit-feedback-loop.md`, `12_validation/VAL-TASK-006.md` | Public XML, order/payment/supplier raw data, secrets, runtime code | Owner-approved synthetic examples, replay keys, redaction checks | No runtime implementation until every required source contract is approved or explicitly deferred. |
-| 4 | Reconcile `TASK-007` event taxonomy with final readiness and policy vocabularies. | Analytics contract owner | Ready now for documentation-only taxonomy reconciliation | `23_documentation_contracts/TASK-007_EVENT_TAXONOMY.md`, `12_validation/VAL-TASK-007.md` | Marketing writes, leads writes, runtime event emission, raw PII/order data | Contract tests for forbidden fields, idempotency, and snapshot-hash replay | Use TASK-004 readiness vocabulary and mark TASK-006 external feedback outcomes as blocked/unavailable where needed. |
 | 5 | Convert `TASK-008` operations evidence into an implementation prompt. | Operations/integration owner | Dependency-gated on approved cadence and rollback procedure | `16_operations/OPS-TASK-008-operations-trust-and-scale.md`, `21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md`, `12_validation/VAL-TASK-008.md` | Kubernetes, deployment scripts, secrets, runtime probes until prompt approval | Smoke checklist, alert payload fixture scan, scale timing evidence | Exact rollback command, public target URL, cadence, and synthetic dataset sizes are still missing. |
 
 ## Parallel Execution Section
 
 - Completed: `TASK-004` readiness implementation is integrated; `TASK-005` and `TASK-006` review outcomes are recorded as runtime-blocked for implementation.
-- Ready now: `TASK-007` taxonomy reconciliation can proceed as documentation-only work using the accepted TASK-004 readiness vocabulary and TASK-006 blocked external-contract outcome.
+- Completed: `TASK-007` taxonomy reconciliation is documented against TASK-002/TASK-003/TASK-004 vocabularies; runtime event emission remains blocked.
 - Dependency-gated: `TASK-008` runtime probe implementation waits for approved public target URL, cadence, rollback procedure, and synthetic scale dataset sizes.
 - Final integration: one integration owner must serialize edits to `services/heureka-service/src/heureka/feed/feed.controller.ts`, `services/heureka-service/src/heureka/feed/feed.service.ts`, `prisma/schema.prisma`, and shared status/validation report files.
 - Merge order: TASK-004 readiness implementation first, TASK-007 taxonomy reconciliation next, TASK-005 storage/review-state only after human approval, TASK-008 probes after cadence/rollback approval, TASK-006 feedback loop last unless external contracts arrive earlier.
@@ -53,4 +52,4 @@ The next cycle is review and integration preparation. Runtime changes must wait 
 
 ## Last completed
 
-TASK-004 catalog feed readiness action.
+TASK-007 event taxonomy reconciliation.
