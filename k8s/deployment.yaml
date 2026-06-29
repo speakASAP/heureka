@@ -46,6 +46,11 @@ spec:
                 secretKeyRef:
                   name: heureka-service-secret
                   key: JWT_TOKEN
+            - name: WAREHOUSE_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: heureka-service-secret
+                  key: WAREHOUSE_SERVICE_TOKEN
           startupProbe:
             httpGet:
               path: /health
