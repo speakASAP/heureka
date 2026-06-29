@@ -14,6 +14,7 @@ WORKDIR /app
 COPY services/heureka-service ./services/heureka-service
 COPY tsconfig.json ./
 COPY package*.json ./
+COPY scripts ./scripts
 COPY prisma ./prisma
 
 # Install service dependencies (which reference shared via file://)
@@ -45,6 +46,8 @@ WORKDIR /app
 # Copy service dist and node_modules
 COPY --from=builder /app/services/heureka-service/dist ./dist
 COPY --from=builder /app/services/heureka-service/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/scripts ./scripts
 
 # Copy entire shared package (source + compiled dist + node_modules for @heureka/shared)
 COPY --from=builder /app/shared ./shared
