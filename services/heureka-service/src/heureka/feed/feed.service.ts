@@ -149,8 +149,19 @@ ${items}
     return buildCatalogFeedReadinessResponse(feedType, snapshots);
   }
 
+  private async findReadinessSettings(feedType: string): Promise<any | null> {
+    try {
+      return await this.prisma.heurekaSettings.findUnique({ where: { feedType } });
+    } catch (error: any) {
+      if (!this.isMissingPrismaTable(error, "heureka_settings")) throw error;
+
+      this.logger.warn(`Readiness settings lookup skipped because heureka_settings table is unavailable for feed type ${feedType}`);
+      return null;
+    }
+  }
+
   private async buildReadinessSnapshot(productId: string, feedType: string): Promise<CatalogFeedReadinessSnapshot> {
-    const settings = await this.prisma.heurekaSettings.findUnique({ where: { feedType } });
+    const settings = await this.findReadinessSettings(feedType);
     try {
       const product = await this.catalogClient.getProductById(productId);
       const [stock, pricing, media] = await Promise.all([
@@ -203,5 +214,11 @@ ${items}
 
   private hasXmlControlCharacters(value: unknown): boolean {
     return typeof value === 'string' && /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value);
+  }
+
+  private isMissingPrismaTable(error: any, tableName: string): boolean {
+    const message = String(error?.message || "");
+    const metaTable = String(error?.meta?.table || error?.meta?.tableName || "");
+    return error?.code === "P2021" || message.includes(tableName) || metaTable.includes(tableName);
   }
 }
