@@ -53,6 +53,16 @@ async function main(): Promise<void> {
       warn: () => undefined,
       error: () => undefined,
     } as any,
+    {
+      getDependencyHealthStatus: async () => ({
+        contractVersion: 'heureka.dependency-health.v1',
+        status: 'ok',
+        service: 'api-gateway',
+        readOnly: true,
+        mutations: [],
+        dependencies: {},
+      }),
+    } as any,
   );
   await (controller as any).routeRequest(
     'auth',

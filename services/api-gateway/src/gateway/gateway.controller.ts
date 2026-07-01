@@ -14,7 +14,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { GatewayService } from './gateway.service';
-import { JwtAuthGuard, LoggerService } from '@heureka/shared';
+import { HealthService, JwtAuthGuard, LoggerService } from '@heureka/shared';
 import { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 
 @Controller('api')
@@ -25,6 +25,7 @@ export class GatewayController {
   constructor(
     private readonly gatewayService: GatewayService,
     loggerService: LoggerService,
+    private readonly healthService: HealthService,
   ) {
     this.sharedLogger = loggerService;
     this.sharedLogger.setContext('GatewayController');
@@ -147,6 +148,14 @@ export class GatewayController {
       service: 'heureka-api-gateway',
       timestamp: new Date().toISOString(),
     });
+  }
+
+  /**
+   * Dependency health endpoint at /api/health/dependencies
+   */
+  @Get('health/dependencies')
+  async dependencyHealth(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
+    return res.json(await this.healthService.getDependencyHealthStatus('api-gateway'));
   }
 
   /**
@@ -430,4 +439,3 @@ export class GatewayController {
     return headers;
   }
 }
-
