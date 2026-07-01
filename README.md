@@ -58,6 +58,7 @@ Heureka XML schema can be checked with:
 
 ```bash
 curl -k https://heureka.alfares.cz/heureka/feed?type=heureka_cz | xmllint --noout -
+curl -k -D - https://heureka.alfares.cz/heureka/feed/preview?type=heureka_cz -o /tmp/heureka-preview.xml
 ```
 
 ## Validation
@@ -70,8 +71,11 @@ npm run verify:heureka-stock-readiness-live
 npm run verify:heureka-blocked-product-lanes
 npm run verify:heureka-external-readiness
 npm run verify:health-dependencies
+NPM_CONFIG_CACHE=/tmp/heureka-npm-cache npm run verify:task-010-source-parity
 LOGGING_SERVICE_URL=http://logging-microservice:3367 npx ts-node --skip-ignore --compiler-options '{"types":["node"]}' services/api-gateway/src/gateway/gateway-route-parity.self-test.ts
 ```
+
+Use `NPM_CONFIG_CACHE=/tmp/heureka-npm-cache` for root `npm run` commands when `/mnt/docker-data` is full, because the default npm cache on that partition can fail before package scripts start.
 
 ## Secrets
 

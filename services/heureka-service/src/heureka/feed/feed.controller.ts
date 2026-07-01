@@ -22,6 +22,22 @@ export class FeedController {
     }
   }
 
+  @Get('preview')
+  async previewFeed(@Query('type') type: string = 'heureka_cz', @Res() res: Response) {
+    try {
+      const result = await this.feedService.previewFeed(type);
+      res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+      res.setHeader('X-Heureka-Feed-Status', result.validation.status);
+      res.setHeader('X-Heureka-Feed-Generation-Ms', String(result.validation.generationMs));
+      res.setHeader('X-Heureka-Feed-Snapshot-Hash', result.validation.snapshotHash);
+      res.setHeader('X-Heureka-Feed-Read-Only', 'true');
+      res.send(result.xml);
+    } catch (error: any) {
+      const status = typeof error.getStatus === 'function' ? error.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
+      res.status(status).json({ success: false, message: error.response?.message || error.message, validation: error.response?.validation });
+    }
+  }
+
   @Get('download')
   async downloadFeed(@Query('type') type: string = 'heureka_cz', @Res() res: Response) {
     try {

@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-07-01T21:09:09Z",
+  "created_at": "2026-07-01T21:41:15Z",
   "gate": "deployment_readiness",
   "next_step": "ready_for_deployment_review",
   "pre_coding_gate": {
@@ -267,143 +267,133 @@
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 242,
+      "line": 244,
       "marker": "[MISSING: ...]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 254,
+      "line": 256,
       "marker": "[MISSING: ecosystem-wide shared operation/audit schema package]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 259,
+      "line": 261,
       "marker": "[MISSING: ...]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 262,
+      "line": 264,
       "marker": "[MISSING: ecosystem-wide shared operation/audit schema package]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 290,
+      "line": 292,
       "marker": "[UNKNOWN: shop approval]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 290,
+      "line": 292,
       "marker": "[UNKNOWN: current external Heureka import/feed-validity result]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 290,
+      "line": 292,
       "marker": "[MISSING: owner-supplied e-shop registration legal/company fields]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 290,
+      "line": 292,
       "marker": "[MISSING: Heureka merchant/API key approval evidence]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 291,
+      "line": 293,
       "marker": "[MISSING: authoritative stock source]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 291,
+      "line": 293,
       "marker": "[MISSING: approved image URLs/files]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 291,
+      "line": 293,
       "marker": "[UNKNOWN: which zero-stock products should be listed]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 323,
+      "line": 325,
       "marker": "[UNKNOWN: shop approval]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 323,
+      "line": 325,
       "marker": "[UNKNOWN: current external Heureka import/feed-validity result]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 323,
+      "line": 325,
       "marker": "[MISSING: owner-supplied e-shop registration legal/company fields]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 323,
+      "line": 325,
       "marker": "[MISSING: Heureka merchant/API key approval evidence]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 327,
+      "line": 331,
       "marker": "[MISSING: Allegro offer id/source]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 336,
+      "line": 340,
       "marker": "[MISSING: authoritative current stock source]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 336,
+      "line": 340,
       "marker": "[MISSING: owner approval for Warehouse mutation]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 337,
+      "line": 341,
       "marker": "[MISSING: approved image URLs/files]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 338,
+      "line": 342,
       "marker": "[UNKNOWN: shop approval]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 338,
+      "line": 342,
       "marker": "[UNKNOWN: current external Heureka import/feed-validity result]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 338,
+      "line": 342,
       "marker": "[MISSING: owner-supplied e-shop registration legal/company fields]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 338,
+      "line": 342,
       "marker": "[MISSING: Heureka merchant/API key approval evidence]",
       "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
     },
     {
-      "line": 66,
+      "line": 67,
       "marker": "[MISSING: ...]",
       "path": "docs/orchestrator/TASK-010-channel-parity-gap-plan.md"
     },
     {
-      "line": 66,
+      "line": 67,
       "marker": "[UNKNOWN: ...]",
       "path": "docs/orchestrator/TASK-010-channel-parity-gap-plan.md"
     },
     {
-      "line": 106,
-      "marker": "[UNKNOWN: production Heureka host and exact public URL until ingress/live route inspection is completed]",
-      "path": "docs/orchestrator/TASK-010-channel-parity-gap-plan.md"
-    },
-    {
-      "line": 107,
-      "marker": "[UNKNOWN: whether existing TASK-009 dirty changes are owner-approved final work or in-progress draft; treat as protected until inspected]",
-      "path": "docs/orchestrator/TASK-010-channel-parity-gap-plan.md"
-    },
-    {
-      "line": 108,
-      "marker": "[UNKNOWN: whether Heureka should expose a service-local React frontend or keep the current server-rendered public controller pattern; decide from reference parity and current repo structure]",
+      "line": 110,
+      "marker": "[MISSING: owner-supplied stock, primary images, and external Heureka approval/import evidence]",
       "path": "docs/orchestrator/TASK-010-channel-parity-gap-plan.md"
     },
     {

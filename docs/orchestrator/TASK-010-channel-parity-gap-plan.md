@@ -3,7 +3,7 @@
 Date: 2026-07-01
 Repository: `/home/ssf/Documents/Github/heureka-service`
 Orchestrator: current Codex thread
-Status: active
+Status: active; code parity implemented through `task-010-readonly-preview-redaction-20260701`, remaining completion is owner/data-gated
 
 ## Vision
 
@@ -41,10 +41,11 @@ Feature family: cross-channel parity for frontend, landing, dashboard, catalog c
 - Use only `/home/ssf/Documents/Github/heureka-service` on `alfares`.
 - Do not edit local application code under `/Users/Sergej.Stasok/Documents/heureka`.
 - Preserve existing dirty worktree changes unless they are clearly part of this task and reviewed.
-- Current preflight at plan creation:
+- Current validated state after implementation:
   - Branch: `main`.
-  - Remote status: `main...origin/main [behind 2]`.
-  - Dirty worktree: existing changes in `Dockerfile`, `README.md`, `STATE.json`, `TASKS.md`, `k8s/deployment.yaml`, validation reports, Heureka feed/public files, shared auth, shared catalog client, and new dashboard/feed files.
+  - Remote status after final deployment and commit: clean worktree; `main...origin/main [ahead 7]`.
+  - Latest deployed images: `localhost:5000/heureka-service:task-010-readonly-preview-redaction-20260701` and `localhost:5000/heureka-api-gateway:task-010-readonly-preview-redaction-20260701`.
+  - Live route evidence: `/health`, `/api/health`, `/health/dependencies`, and `/api/health/dependencies` return `200`; `/heureka/feed/preview?type=heureka_cz` returns XML with `x-heureka-feed-read-only: true`; `/api/heureka/orders` returns expected unauthenticated `401`.
 
 ### Phase 1: Parallel Discovery
 
@@ -75,9 +76,9 @@ Only after the checklist is written, split code work into disjoint write scopes:
 
 | Lane | Status | Owner Role | Objective | Allowed Files | Forbidden Files | Dependency | Integration Owner |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| D | dependency-gated | Worker: frontend/public surface | Bring landing/Auth/static dashboard shell to reference parity. | `services/heureka-service/src/public/**`, frontend/static assets if present, nginx/k8s only if route wiring requires it. | Catalog/orders/shared clients. | Phase 2 checklist. | Orchestrator. |
-| E | dependency-gated | Worker: product/feed catalog parity | Bring Catalog product/feed controls to reference channel lifecycle shape. | `services/heureka-service/src/heureka/feed/**`, `shared/clients/catalog-client.service.ts` if needed. | Public landing/dashboard files. | Phase 2 checklist. | Orchestrator. |
-| F | dependency-gated | Worker: orders/logging/health parity | Bring Orders, logging, health, and telemetry to reference channel lifecycle shape. | `services/heureka-service/src/heureka/orders/**`, `shared/logger/**`, `shared/clients/order-client.service.ts`, service health wiring. | Public/feed files unless needed for route registration. | Phase 2 checklist. | Orchestrator. |
+| D | implemented | Worker: frontend/public surface | Bring landing/Auth/static dashboard shell to reference parity. | `services/heureka-service/src/public/**`, frontend/static assets if present, nginx/k8s only if route wiring requires it. | Catalog/orders/shared clients. | Phase 2 checklist. | Public landing/Auth/dashboard shells deployed and smoke-tested. |
+| E | implemented with owner/data-gated product readiness residuals | Worker: product/feed catalog parity | Bring Catalog product/feed controls to reference channel lifecycle shape. | `services/heureka-service/src/heureka/feed/**`, `shared/clients/catalog-client.service.ts` if needed. | Public landing/dashboard files. | Phase 2 checklist. | Catalog content/profile, Warehouse batch readiness, and read-only external feed preview implemented; current blockers are stock/image owner data. |
+| F | implemented with platform-level audit package residual | Worker: orders/logging/health parity | Bring Orders, logging, health, and telemetry to reference channel lifecycle shape. | `services/heureka-service/src/heureka/orders/**`, `shared/logger/**`, `shared/clients/order-client.service.ts`, service health wiring. | Public/feed files unless needed for route registration. | Phase 2 checklist. | Orders contract, local operation events, gateway orders routing, dependency health, and redacted gateway error logging deployed; shared ecosystem audit package remains separate platform work. |
 
 Conflict rule: if two lanes need the same file, that file becomes orchestrator-owned and workers must hand off recommendations instead of editing it.
 
@@ -95,15 +96,15 @@ Implement missing Heureka channel parity by copying the proven shape of other Al
 
 ## Code
 
-Pending Phase 2 checklist.
+Implemented in the remote repo and tracked in `docs/orchestrator/TASK-010-channel-parity-checklist.md`.
 
 ## Validation
 
-Pending implementation. Validation must include exact command output summary for every changed surface.
+Validated with targeted self-tests, TypeScript builds, IPS gates, live deployment smoke, dependency-health smoke, gateway route/redaction smoke, read-only feed preview smoke, blocked-product lane verifier, and external-readiness verifier. Use `npm run verify:task-010-source-parity` for the consolidated non-mutating source parity bundle.
 
 ## Open Questions
 
-- `[UNKNOWN: production Heureka host and exact public URL until ingress/live route inspection is completed]`
-- `[UNKNOWN: whether existing TASK-009 dirty changes are owner-approved final work or in-progress draft; treat as protected until inspected]`
-- `[UNKNOWN: whether Heureka should expose a service-local React frontend or keep the current server-rendered public controller pattern; decide from reference parity and current repo structure]`
-
+- `[RESOLVED: production Heureka host]`; live public URL is `https://heureka.alfares.cz`.
+- `[RESOLVED: TASK-009 dirty worktree baseline]`; TASK-010 changes are committed and deployed in the remote repo; current worktree is clean except branch ahead status when not pushed.
+- `[RESOLVED: frontend implementation style]`; Heureka keeps the current server-rendered public controller/dashboard pattern because it matches Bazos/Aukro static-controller parity and avoids introducing a new local React app only for Heureka.
+- `[MISSING: owner-supplied stock, primary images, and external Heureka approval/import evidence]`; these are the remaining completion blockers and are tracked in `TASK-010-data-owner-handoff.md`.

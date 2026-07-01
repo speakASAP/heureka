@@ -7,6 +7,9 @@ import { HeurekaOperationEventService } from '../operations/operation-event.serv
 interface FeedGenerationResult {
   xml: string;
   validation: FeedValidationSnapshot;
+  sourceProductCount: number;
+  publicProductCount: number;
+  settings: any;
 }
 
 type StockAvailabilityLookup = Map<string, number | null>;
@@ -32,70 +35,46 @@ export class FeedService {
     return result.xml;
   }
 
-  async generateFeedWithLifecycle(feedType: string = 'heureka_cz'): Promise<FeedGenerationResult> {
-    const startedAt = Date.now();
-    try {
-      const settings = await this.prisma.heurekaSettings.findUnique({ where: { feedType } });
-      if (!settings || !settings.isActive) throw new NotFoundException(`Settings not found or inactive for feed type: ${feedType}`);
+  async previewFeed(feedType: string = 'heureka_cz'): Promise<FeedGenerationResult> {
+    return this.renderFeedSnapshot(feedType, { feedId: 'read-only-preview', readOnly: true });
+  }
 
+  async generateFeedWithLifecycle(feedType: string = 'heureka_cz'): Promise<FeedGenerationResult> {
+    try {
       const feed = await this.prisma.heurekaFeed.create({ data: { feedType, status: 'generating' } });
       try {
-        const includedProducts = await this.prisma.heurekaProduct.findMany({ where: { isIncluded: true } });
-        const productIds = includedProducts.map((p) => p.productId);
-        this.logger.log(`Generating feed for ${productIds.length} products`, { feedType, feedId: feed.id });
-        const stockByProductId = await this.buildStockAvailabilityLookup(productIds);
+        const result = await this.renderFeedSnapshot(feedType, { feedId: feed.id, readOnly: false });
 
-        const products = await Promise.all(productIds.map(async (productId) => {
-          try {
-            const [product, pricing, media, feedSnapshot] = await Promise.all([
-              this.catalogClient.getProductById(productId),
-              this.catalogClient.getProductPricing(productId),
-              this.catalogClient.getProductMedia(productId),
-              this.catalogClient.getHeurekaFeedSnapshot(productId, feedType),
-            ]);
-            const mediaItems = Array.isArray(media) ? media : [];
-            const feedFields = this.buildHeurekaFeedFields(product, pricing, mediaItems, settings, feedSnapshot);
-            return {
-              ...product,
-              stock: this.stockFromLookup(stockByProductId, productId) ?? 0,
-              price: this.optionalNumber(feedFields.PRICE_VAT) ?? 0,
-              images: mediaItems.filter((m: any) => m.type === 'image'),
-              feedFields,
-            };
-          } catch (error: any) {
-            this.logger.warn(`Failed to fetch product ${productId}: ${error.message}`);
-            return null;
-          }
-        }));
-
-        const fetchedProducts = products.filter((p) => p !== null) as any[];
-        const validProducts = fetchedProducts.filter((p) => Number(p.stock) > 0 && this.hasRequiredPublicFeedFields(p.feedFields || {}));
-        const zeroStockExcludedCount = fetchedProducts.length - validProducts.length;
-        const failedFetchCount = products.length - fetchedProducts.length;
-        const xml = this.buildHeurekaXml(validProducts, settings);
-        const generatedAt = new Date();
-        const generationMs = Date.now() - startedAt;
-        const validation = validateHeurekaFeed({ feedId: feed.id, feedType, xml, generatedAt, generationMs, includedProductCount: validProducts.length, zeroStockExcludedCount, failedFetchCount });
-        this.latestValidationByType.set(feedType, validation);
-
-        if (validation.status !== 'valid') {
-          await this.prisma.heurekaFeed.update({ where: { id: feed.id }, data: { status: 'failed', productCount: validProducts.length, generatedAt } });
-          throw new BadRequestException({ message: 'Generated feed failed lifecycle validation', validation });
+        if (result.validation.status !== 'valid') {
+          await this.prisma.heurekaFeed.update({ where: { id: feed.id }, data: { status: 'failed', productCount: result.publicProductCount, generatedAt: new Date(result.validation.generatedAt) } });
+          throw new BadRequestException({ message: 'Generated feed failed lifecycle validation', validation: result.validation });
         }
 
-        await this.prisma.heurekaFeed.update({ where: { id: feed.id }, data: { status: 'completed', productCount: validProducts.length, generatedAt, feedUrl: `${process.env.SHOP_URL || settings.shopUrl}/feeds/${feedType}.xml` } });
-        this.logger.log(`Feed generated successfully: ${validProducts.length} products`, { feedId: feed.id, feedType, generationMs, zeroStockExcludedCount, failedFetchCount });
+        await this.prisma.heurekaFeed.update({ where: { id: feed.id }, data: { status: 'completed', productCount: result.publicProductCount, generatedAt: new Date(result.validation.generatedAt), feedUrl: `${process.env.SHOP_URL || result.settings.shopUrl}/feeds/${feedType}.xml` } });
+        this.logger.log(`Feed generated successfully: ${result.publicProductCount} products`, {
+          feedId: feed.id,
+          feedType,
+          generationMs: result.validation.generationMs,
+          zeroStockExcludedCount: result.validation.zeroStockExcludedCount,
+          failedFetchCount: result.validation.failedFetchCount,
+        });
         await this.operationEvents?.append({
           feedType,
           action: 'feed_generation_completed',
           entityType: 'feed_service',
           entityId: feed.id,
-          status: validation.status,
-          errorSummary: `${feedType} feed generation completed with ${validProducts.length} public products`,
-          requestSummary: { feedType, includedProductCount: productIds.length },
-          responseSummary: { feedId: feed.id, generationMs, zeroStockExcludedCount, failedFetchCount, publicProductCount: validProducts.length },
+          status: result.validation.status,
+          errorSummary: `${feedType} feed generation completed with ${result.publicProductCount} public products`,
+          requestSummary: { feedType, includedProductCount: result.sourceProductCount },
+          responseSummary: {
+            feedId: feed.id,
+            generationMs: result.validation.generationMs,
+            zeroStockExcludedCount: result.validation.zeroStockExcludedCount,
+            failedFetchCount: result.validation.failedFetchCount,
+            publicProductCount: result.publicProductCount,
+          },
         });
-        return { xml, validation };
+        return result;
       } catch (error: any) {
         if (!(error instanceof BadRequestException)) await this.prisma.heurekaFeed.update({ where: { id: feed.id }, data: { status: 'failed' } });
         await this.operationEvents?.append({
@@ -114,6 +93,71 @@ export class FeedService {
       this.logger.error(`Failed to generate feed: ${error.message}`, error.stack);
       throw error;
     }
+  }
+
+  private async renderFeedSnapshot(feedType: string, options: { feedId?: string; readOnly?: boolean } = {}): Promise<FeedGenerationResult> {
+    const startedAt = Date.now();
+    const settings = await this.prisma.heurekaSettings.findUnique({ where: { feedType } });
+    if (!settings || !settings.isActive) throw new NotFoundException(`Settings not found or inactive for feed type: ${feedType}`);
+
+    const includedProducts = await this.prisma.heurekaProduct.findMany({ where: { isIncluded: true } });
+    const productIds = includedProducts.map((p) => p.productId);
+    this.logger.log(`${options.readOnly ? 'Rendering read-only feed preview' : 'Generating feed'} for ${productIds.length} products`, {
+      feedType,
+      feedId: options.feedId,
+      readOnly: Boolean(options.readOnly),
+    });
+    const stockByProductId = await this.buildStockAvailabilityLookup(productIds);
+
+    const products = await Promise.all(productIds.map(async (productId) => {
+      try {
+        const [product, pricing, media, feedSnapshot] = await Promise.all([
+          this.catalogClient.getProductById(productId),
+          this.catalogClient.getProductPricing(productId),
+          this.catalogClient.getProductMedia(productId),
+          this.catalogClient.getHeurekaFeedSnapshot(productId, feedType),
+        ]);
+        const mediaItems = Array.isArray(media) ? media : [];
+        const feedFields = this.buildHeurekaFeedFields(product, pricing, mediaItems, settings, feedSnapshot);
+        return {
+          ...product,
+          stock: this.stockFromLookup(stockByProductId, productId) ?? 0,
+          price: this.optionalNumber(feedFields.PRICE_VAT) ?? 0,
+          images: mediaItems.filter((m: any) => m.type === 'image'),
+          feedFields,
+        };
+      } catch (error: any) {
+        this.logger.warn(`Failed to fetch product ${productId}: ${error.message}`);
+        return null;
+      }
+    }));
+
+    const fetchedProducts = products.filter((p) => p !== null) as any[];
+    const validProducts = fetchedProducts.filter((p) => Number(p.stock) > 0 && this.hasRequiredPublicFeedFields(p.feedFields || {}));
+    const zeroStockExcludedCount = fetchedProducts.length - validProducts.length;
+    const failedFetchCount = products.length - fetchedProducts.length;
+    const xml = this.buildHeurekaXml(validProducts, settings);
+    const generatedAt = new Date();
+    const generationMs = Date.now() - startedAt;
+    const validation = validateHeurekaFeed({
+      feedId: options.feedId,
+      feedType,
+      xml,
+      generatedAt,
+      generationMs,
+      includedProductCount: validProducts.length,
+      zeroStockExcludedCount,
+      failedFetchCount,
+    });
+    this.latestValidationByType.set(feedType, validation);
+
+    return {
+      xml,
+      validation,
+      sourceProductCount: productIds.length,
+      publicProductCount: validProducts.length,
+      settings,
+    };
   }
 
   private buildHeurekaXml(products: any[], settings: any): string {

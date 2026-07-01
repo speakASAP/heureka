@@ -1,5 +1,5 @@
 import { GatewayController } from './gateway.controller';
-import { isHeurekaServiceBackendPath } from './gateway.service';
+import { isHeurekaServiceBackendPath, redactGatewayLogText, summarizeGatewayLogPayload } from './gateway.service';
 
 function assertEqual(actual: unknown, expected: unknown, label: string): void {
   if (actual !== expected) {
@@ -91,6 +91,20 @@ async function main(): Promise<void> {
   );
   assertEqual(capturedStatus, 409, 'forwarded status');
   assertEqual(capturedBody?.error?.code, 'CONFLICT', 'forwarded body');
+
+  const redactedText = redactGatewayLogText('password=secret token=abc123 Authorization: Bearer raw-token-value');
+  if (redactedText.includes('secret') || redactedText.includes('abc123') || redactedText.includes('raw-token-value')) {
+    throw new Error(`gateway log text redaction leaked sensitive values: ${redactedText}`);
+  }
+  const payloadSummary = summarizeGatewayLogPayload({
+    message: 'failed',
+    password: 'secret',
+    token: 'abc123',
+  });
+  const serializedPayloadSummary = JSON.stringify(payloadSummary);
+  if (serializedPayloadSummary.includes('secret') || serializedPayloadSummary.includes('abc123')) {
+    throw new Error(`gateway log payload summary leaked sensitive values: ${serializedPayloadSummary}`);
+  }
 
   console.log('PASS gateway-route-parity self-test');
 }

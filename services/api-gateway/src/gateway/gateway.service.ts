@@ -12,6 +12,43 @@ import { LoggerService } from '@heureka/shared';
 import { Agent as HttpAgent } from 'http';
 import { Agent as HttpsAgent } from 'https';
 
+const SENSITIVE_LOG_TEXT_PATTERN = /(authorization|cookie|set-cookie|password|token|secret|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret)(["'\s:=]+)([^&\s",}]+)/gi;
+const BEARER_LOG_TEXT_PATTERN = /(Bearer\s+)[A-Za-z0-9._~+/-]+=*/gi;
+
+export function redactGatewayLogText(value: unknown): string {
+  const text = String(value ?? '');
+  if (!text) return '';
+  return text
+    .replace(BEARER_LOG_TEXT_PATTERN, '$1[REDACTED]')
+    .replace(SENSITIVE_LOG_TEXT_PATTERN, '$1$2[REDACTED]')
+    .slice(0, 1000);
+}
+
+export function summarizeGatewayLogPayload(value: unknown): Record<string, unknown> | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'object') {
+    return {
+      type: typeof value,
+      length: String(value).length,
+      redacted: true,
+    };
+  }
+
+  if (Array.isArray(value)) {
+    return {
+      type: 'array',
+      length: value.length,
+      redacted: true,
+    };
+  }
+
+  return {
+    type: 'object',
+    keys: Object.keys(value as Record<string, unknown>).slice(0, 20),
+    redacted: true,
+  };
+}
+
 export function isHeurekaServiceBackendPath(fullPath: string): boolean {
   const pathOnly = String(fullPath || '').split('?')[0];
   const heurekaOwnedPrefixes = [
@@ -142,11 +179,11 @@ export class GatewayService implements OnModuleInit {
       (error) => {
         const timestamp = new Date().toISOString();
         console.error(`[${timestamp}] [TIMING] Axios Request Interceptor: Error`, {
-          error: error.message,
+          error: redactGatewayLogText(error.message),
           errorCode: error.code,
         });
         this.sharedLogger.error(`[${timestamp}] [TIMING] Axios Request Interceptor: Error`, {
-          error: error.message,
+          error: redactGatewayLogText(error.message),
           errorCode: error.code,
         });
         return Promise.reject(error);
@@ -196,10 +233,10 @@ export class GatewayService implements OnModuleInit {
         
         console.error(`[${timestamp}] [TIMING] Axios Response Interceptor: Error`, {
           requestId,
-          error: error.message,
+          error: redactGatewayLogText(error.message),
           errorCode: error.code,
           status: error.response?.status,
-          url: error.config?.url,
+          url: redactGatewayLogText(error.config?.url),
           method: error.config?.method?.toUpperCase(),
           duration: duration ? `${duration}ms` : 'unknown',
           durationMs: duration,
@@ -207,7 +244,7 @@ export class GatewayService implements OnModuleInit {
         });
         this.sharedLogger.error(`[${timestamp}] [TIMING] Axios Response Interceptor: Error`, {
           requestId,
-          error: error.message,
+          error: redactGatewayLogText(error.message),
           errorCode: error.code,
           duration: duration ? `${duration}ms` : 'unknown',
           durationMs: duration,
@@ -898,7 +935,7 @@ export class GatewayService implements OnModuleInit {
         method,
         url,
         path,
-        errorMessage: error.message,
+        errorMessage: redactGatewayLogText(error.message),
         errorCode: error.code,
         errorName: error.name,
         durationMs: duration,
@@ -914,16 +951,16 @@ export class GatewayService implements OnModuleInit {
           url,
           path,
           baseUrl,
-          error: error.message,
+          error: redactGatewayLogText(error.message),
           errorCode: error.code,
           status: errorResponse?.status,
           statusText: errorResponse?.statusText,
           duration: `${duration}ms`,
           durationSeconds: Math.round(duration / 1000),
           isTimeout: error.code === 'ECONNABORTED' || error.message?.includes('timeout'),
-          errorData: JSON.stringify(errorData, null, 2),
+          errorDataSummary: summarizeGatewayLogPayload(errorData),
           errorResponseKeys: errorData && typeof errorData === 'object' ? Object.keys(errorData) : [],
-          errorStack: error.stack,
+          errorStackPresent: Boolean(error.stack),
           timestamp: new Date().toISOString(),
           step: 'GATEWAY_FORWARD_ERROR',
         });
@@ -939,20 +976,20 @@ export class GatewayService implements OnModuleInit {
         durationMs: duration,
         isPublishAll,
         errorCode: error.code,
-        errorMessage: error.message,
+        errorMessage: redactGatewayLogText(error.message),
         errorName: error.name,
         errorStatus: errorResponse?.status,
         errorStatusText: errorResponse?.statusText,
-        errorData: errorData ? (typeof errorData === 'object' ? JSON.stringify(errorData, null, 2) : String(errorData)) : null,
+        errorDataSummary: summarizeGatewayLogPayload(errorData),
         errorDataKeys: errorData && typeof errorData === 'object' ? Object.keys(errorData) : [],
         errorResponseHeaders: errorResponse?.headers ? Object.keys(errorResponse.headers) : [],
-        errorStack: error.stack,
+        errorStackPresent: Boolean(error.stack),
         axiosError: error.isAxiosError,
         timeout: error.code === 'ECONNABORTED' || error.message?.includes('timeout'),
         connectionRefused: error.code === 'ECONNREFUSED',
         dnsError: error.code === 'ENOTFOUND',
         timedOut: error.code === 'ETIMEDOUT',
-        configUrl: error.config?.url,
+        configUrl: redactGatewayLogText(error.config?.url),
         configMethod: error.config?.method,
         configTimeout: error.config?.timeout,
         configHeaders: error.config?.headers ? Object.keys(error.config.headers) : [],
@@ -961,7 +998,7 @@ export class GatewayService implements OnModuleInit {
       };
 
       this.sharedLogger.error(`[${requestId}] Error forwarding request to ${serviceName}`, errorDetails);
-      this.logger.error(`[${requestId}] Error forwarding request to ${serviceName}: ${error.message}`, errorDetails);
+      this.logger.error(`[${requestId}] Error forwarding request to ${serviceName}: ${redactGatewayLogText(error.message)}`, errorDetails);
       
       throw error;
     }

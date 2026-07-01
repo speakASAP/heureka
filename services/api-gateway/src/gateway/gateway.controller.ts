@@ -13,7 +13,7 @@ import {
   UnauthorizedException,
   Logger,
 } from '@nestjs/common';
-import { GatewayService } from './gateway.service';
+import { GatewayService, redactGatewayLogText, summarizeGatewayLogPayload } from './gateway.service';
 import { HealthService, JwtAuthGuard, LoggerService } from '@heureka/shared';
 import { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 
@@ -81,7 +81,7 @@ export class GatewayController {
     } catch (error: any) {
       const duration = Date.now() - startTime;
       this.sharedLogger.error(`[${requestId}] OAuth callback error`, {
-        error: error.message,
+        error: redactGatewayLogText(error.message),
         duration: `${duration}ms`,
       });
       const errorStatus = error.response?.status || 500;
@@ -315,10 +315,10 @@ export class GatewayController {
         originalUrl: req.originalUrl,
         duration: `${duration}ms`,
         errorType: error.constructor?.name,
-        errorMessage: error.message,
+        errorMessage: redactGatewayLogText(error.message),
         errorCode: error.code,
         errorStatus,
-        errorData: error.response?.data,
+        errorDataSummary: summarizeGatewayLogPayload(error.response?.data),
       };
 
       // Handle 401 Unauthorized - don't log as error for auth endpoints (expected response)
@@ -357,7 +357,7 @@ export class GatewayController {
 
       // Log other errors
       this.sharedLogger.error(`[${requestId}] Request failed`, errorDetails);
-      this.logger.error(`[${requestId}] ${method} ${req.originalUrl} failed: ${error.message}`, errorDetails);
+      this.logger.error(`[${requestId}] ${method} ${req.originalUrl} failed: ${redactGatewayLogText(error.message)}`, errorDetails);
 
       // Handle timeout errors (auth service unreachable)
       if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {

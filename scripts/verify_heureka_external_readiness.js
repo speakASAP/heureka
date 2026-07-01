@@ -4,7 +4,7 @@
 const crypto = require('crypto');
 
 const CONTRACT_VERSION = 'heureka-external-readiness.v1';
-const DEFAULT_PUBLIC_FEED_URL = 'https://heureka.alfares.cz/heureka/feed?type=heureka_cz';
+const DEFAULT_PUBLIC_FEED_URL = 'https://heureka.alfares.cz/heureka/feed/preview?type=heureka_cz';
 const OWNER_BLOCKERS = [
   '[UNKNOWN: shop approval]',
   '[UNKNOWN: current external Heureka import/feed-validity result]',
@@ -75,6 +75,7 @@ async function fetchText(url, options = {}) {
 function feedStatusFromResponse(response) {
   const contentType = response.headers.get('content-type') || '';
   const heurekaFeedStatus = response.headers.get('x-heureka-feed-status') || null;
+  const readOnlyHeader = response.headers.get('x-heureka-feed-read-only') || null;
   const body = response.body || '';
   const shopItemCount = countMatches(body, /<SHOPITEM\b/gi);
   const imgUrlCount = countMatches(body, /<IMGURL\b/gi);
@@ -88,6 +89,9 @@ function feedStatusFromResponse(response) {
   if (heurekaFeedStatus && !['valid', 'ready', 'ok'].includes(heurekaFeedStatus.toLowerCase())) {
     errors.push(`Public feed status header is ${heurekaFeedStatus}`);
   }
+  if (readOnlyHeader !== 'true') {
+    errors.push('Public feed verification endpoint did not confirm read-only rendering');
+  }
 
   return {
     status: errors.length ? 'blocked' : 'ready',
@@ -95,6 +99,7 @@ function feedStatusFromResponse(response) {
     httpStatus: response.status,
     contentType,
     heurekaFeedStatus,
+    readOnly: readOnlyHeader === 'true',
     contentLength: Buffer.byteLength(body),
     bodySha256: sha256(body),
     shopItemCount,
@@ -119,6 +124,7 @@ async function verifyPublicFeed() {
       httpStatus: null,
       contentType: null,
       heurekaFeedStatus: null,
+      readOnly: false,
       contentLength: 0,
       bodySha256: null,
       shopItemCount: 0,
