@@ -71,6 +71,81 @@ Sanitized result:
 
 No order id was returned and no reservation status was present. The failure occurs while resolving the Heureka account, before forwarding to Orders.
 
+## 2026-07-01 Current Runtime Verification
+
+Role: integration validator / smoke gate.
+
+Intent Preservation Chain:
+
+- Vision: Alfares marketplace channels should create canonical Orders without duplicating order lifecycle, Catalog product truth, Warehouse stock truth, or reservation authority.
+- Goal Impact: Goal 7.2A verifies Heureka-side readiness for a sanitized create, idempotent replay, and Warehouse reservation readback smoke.
+- System: Heureka, Orders, Catalog, and Warehouse remain separately owned; Heureka only forwards accepted channel order facts.
+- Feature: `POST /heureka/orders/ingest` smoke gate.
+- Task: Verify runtime env names, source forwarding contract, and pod-local smoke prerequisites without printing secrets or raw production data.
+- Execution Plan: Read repo instructions/contracts, validate source contract/builds, inspect live env-name presence only, run pod-local preflight, and do not execute mutating smoke while any `[MISSING: ...]` blocker remains.
+- Coding Prompt: No source/runtime changes were required; evidence is recorded in this document only.
+- Code: Source remains ready; the live runtime image is `localhost:5000/heureka-service:92c0bb0`, and remote head `9c4c308` differs from that image only by documentation and the lane-local smoke script.
+- Validation: See command evidence below.
+
+### Instruction Discovery
+
+- `AGENTS.md`, `CLAUDE.md`, `AGENT_OPERATIONS.md`, `PLAN.md`, the order ingestion contract, service/client files, smoke scripts, and Kubernetes manifests were read from the remote repo.
+- Docs RAG lookup retried through the pod Node runtime after the documented `curl` path failed because `curl` is not installed in the Heureka container; the Node query returned status `200` with empty context and no sources.
+
+### Runtime Env Presence
+
+Presence only; no values were printed.
+
+- `JWT_TOKEN`: present.
+- Orders URL env used by code: `ORDER_SERVICE_URL` present; `ORDERS_SERVICE_URL` and `ORDERS_MICROSERVICE_URL` absent.
+- Orders token env used by code: `JWT_TOKEN` present as the internal-token fallback; `ORDERS_SERVICE_TOKEN`, `HEUREKA_INTERNAL_SERVICE_TOKEN`, and `INTERNAL_SERVICE_TOKEN` absent.
+- Warehouse URL env used by code: `WAREHOUSE_SERVICE_URL` present.
+- Warehouse token env used by code: `WAREHOUSE_SERVICE_TOKEN` and `JWT_TOKEN` present; `SERVICE_TOKEN` absent.
+- Deployment env refs: `JWT_TOKEN` and `WAREHOUSE_SERVICE_TOKEN` come from `heureka-service-secret`; `DATABASE_URL` comes from `heureka-database-url-secret`; config ref is `heureka-config`.
+
+### Source Contract Evidence
+
+- `OrderClientService` forwards `contractVersion: orders.create.v1`.
+- `OrderClientService` sends `x-internal-service-token` and `x-service-name: heureka-service` when an internal token is present.
+- `HeurekaOrdersService` forwards `channel: heureka`, stable `externalOrderId`, stable `channelAccountId`, canonical Catalog `items[].productId`, and Warehouse-owned `items[].warehouseId`.
+- `HeurekaOrdersService` fails closed before Orders on missing/non-canonical Catalog product IDs and missing/ambiguous/non-reservable Warehouse routes.
+
+### Validation Commands
+
+- `npm run verify:heureka-order-ingestion`: passed.
+- `LOGGING_SERVICE_URL=http://logging-microservice:3367 npx ts-node --skip-ignore --compiler-options '{"types":["node"]}' services/heureka-service/src/heureka/orders/orders.service.spec.ts`: passed.
+- `npm --prefix shared run build`: passed.
+- `LOGGING_SERVICE_URL=http://logging-microservice:3367 npm --prefix services/heureka-service run build`: passed.
+- Initial focused spec run without `LOGGING_SERVICE_URL` did not reach assertions because shared logger config requires that non-secret env var.
+
+### Sanitized Pod-Local Preflight
+
+Command shape:
+
+```bash
+kubectl -n statex-apps exec -i deployment/heureka-service -- node - < scripts/smoke_heureka_order_ingestion_live.js
+```
+
+Result: exited `2` by design because preflight found schema blockers.
+
+- channel: `heureka`
+- endpoint: `/heureka/orders/ingest`
+- Heureka health status: `200`
+- Catalog product status: `200`
+- Warehouse stock status: `200`
+- reservable Warehouse route count: `1`
+- selected Warehouse route: `c0de0000-0000-4000-8000-000000000013`
+- runtime schema check: completed
+- present required order tables: none
+- missing required order tables:
+  - `[MISSING: public.heureka_accounts]`
+  - `[MISSING: public.heureka_orders]`
+  - `[MISSING: public.heureka_offers]`
+
+### Smoke Gate Decision
+
+The mutating create/replay/Warehouse-reservation smoke was not run. The live preflight still contains `[MISSING: ...]` schema blockers, and running `--execute` would create an unsafe production mutation before the Heureka persistence prerequisites exist. No Orders repo edits, Vault changes, deploys, raw token values, raw customer data, payment details, database rows, or production order rows were produced by this verification pass.
+
 ## Blockers
 
 - `[MISSING: public.heureka_accounts]` - required by `HeurekaOrdersService.resolveAccount`.
