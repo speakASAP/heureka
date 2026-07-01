@@ -290,3 +290,17 @@ Sanitized result:
 The earlier blockers `[MISSING: successful Orders Warehouse reservation handoff for Heureka]`, `[MISSING: successful first order ingest]`, `[MISSING: successful idempotent replay]`, `[MISSING: orderId]`, and `[MISSING: reservationStatus]` are superseded by the final smoke pass above.
 
 Remaining non-Orders item: `[UNKNOWN: external Heureka e-shop registration details]` for the owner-operated `sluzby.heureka.cz/shop-registration/company` flow.
+
+## 2026-07-02 Runtime Token Source Recheck
+
+Role: integration validator.
+
+- Vision: Heureka order forwarding should keep using the shared Orders contract and service-token shape used by other Alfares sales channels.
+- Goal Impact: close the remaining TASK-010 runtime-token-source uncertainty without creating or mutating orders.
+- System: Heureka service deployment, shared `OrderClientService`, Orders service URL config, and Warehouse preflight token config.
+- Feature: read-only Orders runtime readiness verifier.
+- Task: add and run `scripts/verify_heureka_orders_runtime_readiness.js` in source mode and pod runtime mode.
+- Execution Plan: verify source contract, manifest env refs, final smoke evidence, and current pod env-name presence only; do not print secret values and do not call mutating endpoints.
+- Coding Prompt: keep this as a verifier and documentation update only; no order ingestion, Orders mutation, Warehouse reservation, or cleanup flow is run in this pass.
+- Code: `scripts/verify_heureka_orders_runtime_readiness.js` plus `npm run verify:heureka-orders-runtime-readiness`.
+- Validation: source mode passes; pod runtime mode returned `contractVersion=heureka-orders-runtime-readiness.v1`, `readOnly=true`, `mutations=[]`, `resolvedOrdersUrlSource=ORDER_SERVICE_URL`, `resolvedInternalTokenSource=HEUREKA_INTERNAL_SERVICE_TOKEN`, and `resolvedWarehouseTokenSource=WAREHOUSE_SERVICE_TOKEN`. Only env presence and string lengths were printed; no token values were printed.

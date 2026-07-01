@@ -67,6 +67,7 @@ Common remote validation commands:
 
 ```bash
 npm run verify:heureka-order-ingestion
+npm run verify:heureka-orders-runtime-readiness
 npm run verify:heureka-stock-readiness-live
 npm run verify:heureka-blocked-product-lanes
 npm run verify:heureka-external-readiness
