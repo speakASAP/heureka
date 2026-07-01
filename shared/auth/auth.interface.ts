@@ -25,6 +25,7 @@ export interface AuthUser {
   isVerified: boolean;
   createdAt?: string;
   updatedAt?: string;
+  roles?: string[];
 }
 
 export interface AuthResponse {

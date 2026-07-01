@@ -8,11 +8,12 @@ import {
   Injectable,
   CanActivate,
   ExecutionContext,
-  UnauthorizedException,
 } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 import { AuthService } from './auth.service';
 import { AuthUser } from './auth.interface';
+
+type HttpStatusError = Error & { status?: number; statusCode?: number };
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -42,7 +43,7 @@ export class JwtAuthGuard implements CanActivate {
       const tokenExtractDuration = Date.now() - tokenExtractStartTime;
 
       if (!token) {
-        throw new UnauthorizedException('No token provided');
+        throw this.unauthorized('No token provided');
       }
 
       // Validate JWT token locally (fast, no HTTP calls)
@@ -55,7 +56,7 @@ export class JwtAuthGuard implements CanActivate {
         
         // Check if token is expired (jwt.verify already does this, but double-check)
         if (decoded.exp && decoded.exp < Date.now() / 1000) {
-          throw new UnauthorizedException('Token expired');
+          throw this.unauthorized('Token expired');
         }
 
         const validationDuration = Date.now() - validationStartTime;
@@ -102,6 +103,7 @@ export class JwtAuthGuard implements CanActivate {
           phone: decoded.phone || decoded.user?.phone,
           isActive: decoded.isActive !== false && decoded.user?.isActive !== false, // Default to true if not specified
           isVerified: decoded.isVerified !== false && decoded.user?.isVerified !== false, // Default to true if not specified
+          roles: this.extractRoles(decoded),
           createdAt: decoded.createdAt || decoded.user?.createdAt || decoded.iat ? new Date(decoded.iat * 1000).toISOString() : undefined,
           updatedAt: decoded.updatedAt || decoded.user?.updatedAt,
         };
@@ -114,7 +116,7 @@ export class JwtAuthGuard implements CanActivate {
               extractedUserId: userId,
             });
           }
-          throw new UnauthorizedException('Invalid token payload: missing user ID');
+          throw this.unauthorized('Invalid token payload: missing user ID');
         }
 
         // Email is preferred but not strictly required if we have a valid ID
@@ -160,19 +162,22 @@ export class JwtAuthGuard implements CanActivate {
         }
 
         // Throw UnauthorizedException for any JWT verification errors
+        if (this.isUnauthorizedError(jwtError)) {
+          throw jwtError;
+        }
         if (jwtError.name === 'TokenExpiredError') {
-          throw new UnauthorizedException('Token expired');
+          throw this.unauthorized('Token expired');
         } else if (jwtError.name === 'JsonWebTokenError') {
-          throw new UnauthorizedException('Invalid token');
+          throw this.unauthorized('Invalid token');
         } else {
-          throw new UnauthorizedException('Token validation failed');
+          throw this.unauthorized('Token validation failed');
         }
       }
     } catch (error: any) {
       const totalDuration = Date.now() - startTime;
       
       // Only log errors in development or if it's not a standard auth failure
-      if (process.env.NODE_ENV === 'development' || !(error instanceof UnauthorizedException)) {
+      if (process.env.NODE_ENV === 'development' || !(this.isUnauthorizedError(error))) {
         console.error(`[JwtAuthGuard] Authentication failed for ${path}`, {
           error: error.message,
           errorType: error.constructor?.name,
@@ -182,17 +187,62 @@ export class JwtAuthGuard implements CanActivate {
       }
 
       // Ensure we always throw UnauthorizedException for auth failures
-      if (error instanceof UnauthorizedException) {
+      if (this.isUnauthorizedError(error)) {
         throw error;
       }
       // If any other error occurs, throw UnauthorizedException
-      throw new UnauthorizedException('Authentication failed');
+      throw this.unauthorized('Authentication failed');
     }
+  }
+
+  private unauthorized(message: string): HttpStatusError {
+    const error = new Error(message) as HttpStatusError;
+    error.name = 'UnauthorizedError';
+    error.status = 401;
+    error.statusCode = 401;
+    return error;
+  }
+
+  private isUnauthorizedError(error: unknown): error is HttpStatusError {
+    return Boolean(
+      error &&
+        typeof error === 'object' &&
+        ((error as HttpStatusError).status === 401 || (error as HttpStatusError).statusCode === 401),
+    );
   }
 
   private extractTokenFromHeader(request: any): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
+  }
+
+  private extractRoles(decoded: any): string[] {
+    const candidates = [
+      decoded?.roles,
+      decoded?.role,
+      decoded?.user?.roles,
+      decoded?.user?.role,
+      decoded?.scope,
+      decoded?.scopes,
+      decoded?.permissions,
+    ];
+
+    const roles = new Set<string>();
+    for (const candidate of candidates) {
+      if (Array.isArray(candidate)) {
+        candidate.forEach((role) => this.addRole(roles, role));
+      } else if (typeof candidate === 'string') {
+        candidate.split(/[,\s]+/).forEach((role) => this.addRole(roles, role));
+      }
+    }
+    return Array.from(roles);
+  }
+
+  private addRole(roles: Set<string>, role: unknown): void {
+    const normalized = String(role || '').trim();
+    if (normalized) {
+      roles.add(normalized);
+    }
   }
 
   private throwConfigError(key: string): never {

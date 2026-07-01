@@ -9,7 +9,7 @@
 
 ## Active
 <!-- Coordinator-maintained -->
-- None
+- TASK-009 Implement User Dashboard And Admin Section
 
 ## Completed
 <!-- Coordinator-append-only -->

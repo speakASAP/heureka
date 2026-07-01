@@ -152,5 +152,22 @@ export class CatalogClientService {
       return [];
     }
   }
+
+  /**
+   * Get public-safe Heureka feed fields rendered by Catalog.
+   */
+  async getHeurekaFeedSnapshot(productId: string, feedType: string = 'heureka_cz'): Promise<any | null> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(`${this.baseUrl}/api/products/${productId}/heureka-feed-snapshot?feedType=${encodeURIComponent(feedType)}`)
+      );
+      return response.data?.data || null;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(`Heureka feed snapshot not available for product ${productId}: ${errorMessage}`, 'CatalogClient');
+      return null;
+    }
+  }
+
 }
 

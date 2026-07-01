@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-06-15T11:55:09Z",
+  "created_at": "2026-07-01T13:47:59Z",
   "gate": "deployment_readiness",
   "next_step": "ready_for_deployment_review",
   "pre_coding_gate": {
@@ -19,7 +19,7 @@
     "score": 100,
     "status": "PASS"
   },
-  "target": "TASK-007",
+  "target": null,
   "unresolved_markers": [
     {
       "line": 35,
@@ -122,6 +122,16 @@
       "path": "23_documentation_contracts/DOCUMENTATION_COMPLETENESS_STANDARD.md"
     },
     {
+      "line": 59,
+      "marker": "[MISSING: catalogProductId]",
+      "path": "23_documentation_contracts/HEUREKA_ORDER_INGESTION_CONTRACT.md"
+    },
+    {
+      "line": 61,
+      "marker": "[MISSING: warehouseId]",
+      "path": "23_documentation_contracts/HEUREKA_ORDER_INGESTION_CONTRACT.md"
+    },
+    {
       "line": 34,
       "marker": "[MISSING: reviewed TASK-007 coding prompt is not approved yet]",
       "path": "23_documentation_contracts/TASK-007_EVENT_TAXONOMY.md"
@@ -160,12 +170,159 @@
       "line": 47,
       "marker": "[UNKNOWN: ...]",
       "path": "PLAN.md"
+    },
+    {
+      "line": 133,
+      "marker": "[UNKNOWN: external Heureka submission API]",
+      "path": "docs/orchestrator/TASK-009-user-dashboard-admin-plan.md"
+    },
+    {
+      "line": 134,
+      "marker": "[MISSING: Catalog heureka marketplace profile connector]",
+      "path": "docs/orchestrator/TASK-009-user-dashboard-admin-plan.md"
+    },
+    {
+      "line": 135,
+      "marker": "[MISSING: app-local user profile table]",
+      "path": "docs/orchestrator/TASK-009-user-dashboard-admin-plan.md"
+    },
+    {
+      "line": 52,
+      "marker": "[UNKNOWN: when external Heureka import check will finish]",
+      "path": "docs/orchestrator/TASK-FEED-010-single-product-feed-publish-smoke.md"
+    },
+    {
+      "line": 53,
+      "marker": "[UNKNOWN: whether Heureka shop approval must complete before feed validity details update]",
+      "path": "docs/orchestrator/TASK-FEED-010-single-product-feed-publish-smoke.md"
+    },
+    {
+      "line": 54,
+      "marker": "[MISSING: Catalog category mapping for CATEGORYTEXT]",
+      "path": "docs/orchestrator/TASK-FEED-010-single-product-feed-publish-smoke.md"
+    },
+    {
+      "line": 19,
+      "marker": "[MISSING: ...]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 54,
+      "marker": "[MISSING: public.heureka_accounts]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 55,
+      "marker": "[MISSING: public.heureka_orders]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 56,
+      "marker": "[MISSING: public.heureka_offers]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 85,
+      "marker": "[MISSING: ...]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 141,
+      "marker": "[MISSING: public.heureka_accounts]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 142,
+      "marker": "[MISSING: public.heureka_orders]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 143,
+      "marker": "[MISSING: public.heureka_offers]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 147,
+      "marker": "[MISSING: ...]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 206,
+      "marker": "[MISSING: successful Orders Warehouse reservation handoff for Heureka]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 207,
+      "marker": "[MISSING: successful first order ingest]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 208,
+      "marker": "[MISSING: successful idempotent replay]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 209,
+      "marker": "[MISSING: orderId]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 210,
+      "marker": "[MISSING: reservationStatus]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 211,
+      "marker": "[UNKNOWN: external Heureka e-shop registration details]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 229,
+      "marker": "[MISSING: successful Orders Warehouse reservation handoff for Heureka]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 230,
+      "marker": "[UNKNOWN: external Heureka e-shop registration details]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 248,
+      "marker": "[MISSING: ...]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 290,
+      "marker": "[MISSING: successful Orders Warehouse reservation handoff for Heureka]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 290,
+      "marker": "[MISSING: successful first order ingest]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 290,
+      "marker": "[MISSING: successful idempotent replay]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 290,
+      "marker": "[MISSING: orderId]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 290,
+      "marker": "[MISSING: reservationStatus]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
+    },
+    {
+      "line": 292,
+      "marker": "[UNKNOWN: external Heureka e-shop registration details]",
+      "path": "docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md"
     }
   ],
   "validation_reports": {
-    "matching_reports": [
-      "12_validation/VAL-TASK-007.md"
-    ],
     "reports": [
       "12_validation/VAL-TASK-001-ips-bootstrap.md",
       "12_validation/VAL-TASK-002.md",
@@ -177,6 +334,6 @@
       "12_validation/VAL-TASK-008.md"
     ],
     "status": "pass",
-    "target": "TASK-007"
+    "target": null
   }
 }

@@ -21,11 +21,13 @@ COPY prisma ./prisma
 WORKDIR /app/services/heureka-service
 RUN npm install
 
-# Generate Prisma client from repo root to avoid prisma CLI attempting implicit package installs in /app/shared
-# Output path in schema is ../shared/node_modules/.prisma/client (relative to /app/prisma/) = /app/shared/node_modules/.prisma/client
+# Generate Prisma client with @prisma/client resolved from shared node_modules.
+# The schema also contains a default generator, so /app/node_modules must exist
+# or Prisma attempts an implicit npm install during Docker build.
 WORKDIR /app
-RUN npm install --prefix /app/shared --save-dev prisma@5.22.0 --silent
+RUN ln -s /app/shared/node_modules ./node_modules
 RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"     ./shared/node_modules/.bin/prisma generate --schema=prisma/schema.prisma
+RUN rm ./node_modules
 # @prisma/client resolves .prisma/client/default.js; without this copy it stays the uninitialized stub
 RUN cp /app/shared/node_modules/.prisma/client/index.js /app/shared/node_modules/.prisma/client/default.js
 # Copy generated client into the service's node_modules/.prisma/client so @prisma/client resolves the real client

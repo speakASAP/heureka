@@ -8,18 +8,22 @@ Heureka.cz/sk XML feed generation service.
 
 ## API
 
-Base: `https://heureka.alfares.cz/api`
+Base: `https://heureka.alfares.cz`
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/feed` | Generate and return XML feed |
-| GET | `/api/feed/download` | Download feed file |
-| POST | `/api/feed/regenerate` | Manually regenerate feed |
-| GET | `/api/products` | List products in feed |
-| POST | `/api/products/:id/include` | Include product |
-| DELETE | `/api/products/:id/exclude` | Exclude product |
-| GET | `/api/settings` | Get feed settings |
-| PUT | `/api/settings` | Update feed settings |
+| GET | `/heureka/feed` | Generate and return XML feed |
+| GET | `/heureka/feed/download` | Download feed file |
+| POST | `/heureka/feed/regenerate` | Manually regenerate feed |
+| GET | `/heureka/feed/status` | Get latest feed status |
+| GET | `/heureka/feed/readiness/products/:productId` | Check one Catalog product for feed readiness |
+| POST | `/heureka/feed/readiness/bulk` | Check up to 100 Catalog products for feed readiness |
+| GET | `/heureka/products` | List products in feed |
+| GET | `/heureka/products/:productId/status` | Read product feed inclusion and readiness |
+| POST | `/heureka/products/:productId/include` | Include product after readiness passes |
+| DELETE | `/heureka/products/:productId/exclude` | Exclude product |
+
+Product include/exclude endpoints require `x-service-name` and `x-internal-service-token` service headers. Catalog should call readiness first and let Heureka own feed inclusion.
 
 ## Feed format
 

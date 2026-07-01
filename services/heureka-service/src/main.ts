@@ -44,6 +44,8 @@ async function bootstrap() {
       { path: 'register', method: RequestMethod.GET },
       { path: 'auth/callback', method: RequestMethod.GET },
       { path: 'dashboard', method: RequestMethod.GET },
+      { path: 'dashboard/products', method: RequestMethod.GET },
+      { path: 'dashboard/admin/users', method: RequestMethod.GET },
     ],
   });
 

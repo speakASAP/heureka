@@ -3,20 +3,20 @@
   "project": "heureka-service",
   "stage": "production",
   "health": "ok",
-  "cycle": 0,
-  "last_cycle_at": "2026-04-05T00:00:00Z",
-  "tasks_active": 0,
+  "cycle": 1,
+  "last_cycle_at": "2026-07-01T00:00:00Z",
+  "tasks_active": 1,
   "tasks_failed_last_cycle": 0,
-  "open_task_ids": [],
+  "open_task_ids": ["TASK-009"],
   "last_milestone": "documentation-standard-applied",
-  "next_focus": "Project completed/frozen: no active goals, plans, tasks, blockers, or human/AI actions pending as of 2026-06-21.",
+  "next_focus": "TASK-009 implements hosted-Auth user dashboard, Heureka product feed controls, and admin-only user/statistics section.",
   "blockers": [],
   "budget_units_used": 0,
   "metrics": {
     "custom": {}
   },
-  "project_status": "completed_frozen",
+  "project_status": "active_goal",
   "completed_at": "2026-06-21",
   "frozen_at": "2026-06-21",
-  "updated_at": "2026-06-21"
+  "updated_at": "2026-07-01"
 }

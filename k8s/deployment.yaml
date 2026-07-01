@@ -46,6 +46,11 @@ spec:
                 secretKeyRef:
                   name: heureka-service-secret
                   key: JWT_TOKEN
+            - name: HEUREKA_INTERNAL_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: catalog-microservice-secret
+                  key: CATALOG_INTERNAL_SERVICE_TOKEN
             - name: WAREHOUSE_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:
