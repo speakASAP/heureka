@@ -38,12 +38,14 @@ Read-only evidence:
 
 - Heureka readiness uses Warehouse batch availability and maps `ZERO_STOCK` to `warehouse-service`.
 - Warehouse availability evidence returned rows for all `41` active products; latest blocker lane reports `25` products with zero available stock and no missing Warehouse rows.
-- Earlier Allegro current-stock snapshot API returned `27` current snapshot rows and `0` matches for the original affected product IDs.
-- Allegro local offers matched the 23 `ALLEGRO-OFFER-*` SKUs, but all are `syncSource=ORDER_HISTORY`, `syncStatus=PARTIAL`, `stockQuantity=0`, `rawStockAvailable=null`.
+- Warehouse batch rows for the 25 zero-stock products are `25/25`, all `totalQuantity=0`, `totalReserved=0`, `totalAvailable=0`.
+- Allegro local offers matched `23/25` products, but all matched rows are non-authoritative order-history data: `ORDER_HISTORY_ONLY`, `syncSource=ORDER_HISTORY`, `syncStatus=PARTIAL`, `stockQuantity=0`, `quantity=0`, `rawStockAvailable=null`.
+- Allegro stock snapshot rows for these products/offers: `0`.
+- Live Allegro current-stock API rows: `0` in the read-only audit because all configured OAuth tokens reported `expired_not_refreshed`; no token refresh was performed.
 - Order history is not current stock authority.
 - Catalog marketplace profile reads for the original affected products returned no stock-like values.
 - `PROD9998` / `a2e15cc0-1a94-4faf-a82f-64afea9e9817` has `[MISSING: Allegro offer id/source]`.
-- `8edc51f2-bed2-433f-8a3c-5738b49a02e1` has `[UNKNOWN: SKU/source]` in current repository/search evidence and is also blocked by missing category, price, and primary image.
+- `8edc51f2-bed2-433f-8a3c-5738b49a02e1` resolves in Catalog as SKU `EAN4893575894`, title `Cvetki gorshki`; its current Catalog pricing read returns `data=null`, media read returns `[]`, and Heureka feed snapshot has `CATEGORYTEXT=null`, `IMGURL=null`, and `PRICE_VAT=null`.
 
 Allowed systems:
 
@@ -76,7 +78,7 @@ Affected product IDs:
 | `7b54c897-be5d-401d-9293-24d115841a0f` | `ALLEGRO-OFFER-18103248918` | stock quantity or exclude |
 | `82baeaf6-5a33-4698-87b8-761d22207722` | `ALLEGRO-OFFER-17708129689` | stock quantity or exclude |
 | `8a11b8da-9e56-4c33-99d9-78630ef083b0` | `ALLEGRO-OFFER-17774652537` | stock quantity or exclude |
-| `8edc51f2-bed2-433f-8a3c-5738b49a02e1` | `[UNKNOWN: SKU/source]` | stock quantity or exclude; also repair Catalog category/price if sellable |
+| `8edc51f2-bed2-433f-8a3c-5738b49a02e1` | `EAN4893575894` / `Cvetki gorshki` | stock quantity or exclude; also repair Catalog category/price if sellable |
 | `a25cd2d4-e061-4929-968b-44a1122ff7b9` | `ALLEGRO-OFFER-18106208015` | stock quantity or exclude |
 | `a2e15cc0-1a94-4faf-a82f-64afea9e9817` | `PROD9998` | stock quantity or exclude; `[MISSING: Allegro offer id/source]` |
 | `aa929535-0f44-43b1-bcb1-0944046ddc5e` | `ALLEGRO-OFFER-18106147579` | stock quantity or exclude |
@@ -116,20 +118,20 @@ Forbidden actions:
 
 Affected product IDs:
 
-| Product ID | SKU / source | Required owner input |
-| --- | --- | --- |
-| `04df2735-f4a8-4278-8a5e-717c7068e516` | `ALLEGRO-OFFER-17708359010` | approved public image URL/file |
-| `2430757b-844f-4609-a3eb-7207efadec23` | `ALLEGRO-OFFER-18106124748` | approved public image URL/file |
-| `5be4e2a2-30d7-45a4-b0b5-0cee96d95517` | `ALLEGRO-OFFER-18227418521` | approved public image URL/file |
-| `633610ea-7b2b-41e7-86c4-587cf6bb1ff6` | `ALLEGRO-OFFER-17771245555` | approved public image URL/file |
-| `7b54c897-be5d-401d-9293-24d115841a0f` | `ALLEGRO-OFFER-18103248918` | approved public image URL/file |
-| `8edc51f2-bed2-433f-8a3c-5738b49a02e1` | `[UNKNOWN: SKU/source]` | approved public image URL/file; also repair Catalog category/price if sellable |
-| `adcaff03-ec55-477f-8b72-99db8b643d24` | `ALLEGRO-OFFER-17729680353` | approved public image URL/file |
-| `caea1a86-19c7-49a4-805f-8ce7041341b2` | `ALLEGRO-OFFER-17729689494` | approved public image URL/file |
-| `d430aa28-d0e9-43ad-98c7-3f4d77e22d3d` | `ALLEGRO-OFFER-17716626156` | approved public image URL/file |
-| `de59bad3-1585-4574-acf2-78489367d418` | `ALLEGRO-OFFER-18103817492` | approved public image URL/file |
-| `dfd1001e-f2e3-4909-be87-6ae9546457dc` | `ALLEGRO-OFFER-18103829475` | approved public image URL/file |
-| `e85e2900-43f8-4709-b46c-7182de60df08` | `ALLEGRO-OFFER-17773437727` | approved public image URL/file |
+| Product ID | SKU / source | Name | Required owner input |
+| --- | --- | --- | --- |
+| `04df2735-f4a8-4278-8a5e-717c7068e516` | `ALLEGRO-OFFER-17708359010` | `Xiaomi Flash USB Drive 3.0 2 TB stříbrný` | approved public image URL/file |
+| `2430757b-844f-4609-a3eb-7207efadec23` | `ALLEGRO-OFFER-18106124748` | `Nafukovací kluzák 93 cm New Year` | approved public image URL/file |
+| `5be4e2a2-30d7-45a4-b0b5-0cee96d95517` | `ALLEGRO-OFFER-18227418521` | `Lenovo Flash drive 2TB` | approved public image URL/file |
+| `633610ea-7b2b-41e7-86c4-587cf6bb1ff6` | `ALLEGRO-OFFER-17771245555` | `Xiaomi Original Flash drive 2TB` | approved public image URL/file |
+| `7b54c897-be5d-401d-9293-24d115841a0f` | `ALLEGRO-OFFER-18103248918` | `Nafukovací kluzák 107 cm Extreme` | approved public image URL/file |
+| `8edc51f2-bed2-433f-8a3c-5738b49a02e1` | `EAN4893575894` | `Cvetki gorshki` | approved public image URL/file; also repair Catalog category/price if sellable |
+| `adcaff03-ec55-477f-8b72-99db8b643d24` | `ALLEGRO-OFFER-17729680353` | `Lenovo microSD karta 1TB` | approved public image URL/file |
+| `caea1a86-19c7-49a4-805f-8ce7041341b2` | `ALLEGRO-OFFER-17729689494` | `Lenovo microSD karta 1TB` | approved public image URL/file |
+| `d430aa28-d0e9-43ad-98c7-3f4d77e22d3d` | `ALLEGRO-OFFER-17716626156` | `Lenovo Micro SD karta 1TB` | approved public image URL/file |
+| `de59bad3-1585-4574-acf2-78489367d418` | `ALLEGRO-OFFER-18103817492` | `Nafukovací kluzák 107 cm Bear` | approved public image URL/file |
+| `dfd1001e-f2e3-4909-be87-6ae9546457dc` | `ALLEGRO-OFFER-18103829475` | `Nafukovací kluzák 107 cm Snow Machine` | approved public image URL/file |
+| `e85e2900-43f8-4709-b46c-7182de60df08` | `ALLEGRO-OFFER-17773437727` | `Lenovo microSD karta 1TB` | approved public image URL/file |
 
 ## Catalog Content And Pricing Lane
 
@@ -138,7 +140,9 @@ Status: blocked by missing public category and price for one active product.
 Read-only evidence:
 
 - `GET /heureka/feed/readiness/products/8edc51f2-bed2-433f-8a3c-5738b49a02e1` returned blockers `MISSING_CATEGORY`, `PRICE_MISSING`, `MISSING_PRIMARY_IMAGE`, and `ZERO_STOCK`.
-- Repository search found no SKU/source evidence for `8edc51f2-bed2-433f-8a3c-5738b49a02e1`.
+- Catalog product read returned SKU `EAN4893575894`, title `Cvetki gorshki`, description `Nejlepsi cvetok gorshok v chechii`, brand `ObozBrand`, manufacturer `Pocenice`, `categories=[]`, `media=[]`, and `pricing=[]`.
+- Catalog pricing source `GET /api/pricing/product/8edc51f2-bed2-433f-8a3c-5738b49a02e1/current` returned `data=null`.
+- Catalog Heureka feed snapshot has `ITEM_ID=EAN4893575894`, `PRODUCTNAME=Cvetki gorshki`, `DESCRIPTION=Nejlepsi cvetok gorshok v chechii`, `CATEGORYTEXT=null`, `IMGURL=null`, and `PRICE_VAT=null`.
 
 Allowed systems:
 
@@ -155,7 +159,7 @@ Affected product IDs:
 
 | Product ID | SKU / source | Required owner input |
 | --- | --- | --- |
-| `8edc51f2-bed2-433f-8a3c-5738b49a02e1` | `[UNKNOWN: SKU/source]` | public Heureka category text, public VAT-inclusive price, primary image, and stock/exclusion decision |
+| `8edc51f2-bed2-433f-8a3c-5738b49a02e1` | `EAN4893575894` / `Cvetki gorshki` | public Heureka category text, public VAT-inclusive price, primary image, and stock/exclusion decision |
 
 ## External Heureka Onboarding Lane
 
