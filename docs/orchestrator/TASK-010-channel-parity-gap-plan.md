@@ -107,4 +107,4 @@ Validated with targeted self-tests, TypeScript builds, IPS gates, live deploymen
 - `[RESOLVED: production Heureka host]`; live public URL is `https://heureka.alfares.cz`.
 - `[RESOLVED: TASK-009 dirty worktree baseline]`; TASK-010 changes are committed and deployed in the remote repo; current worktree is clean except branch ahead status when not pushed.
 - `[RESOLVED: frontend implementation style]`; Heureka keeps the current server-rendered public controller/dashboard pattern because it matches Bazos/Aukro static-controller parity and avoids introducing a new local React app only for Heureka.
-- `[MISSING: owner-supplied stock, primary images, and external Heureka approval/import evidence]`; these are the remaining completion blockers and are tracked in `TASK-010-data-owner-handoff.md`.
+- `[MISSING: owner-supplied stock, primary images, public category/price for one product, and external Heureka approval/import evidence]`; these are the remaining completion blockers and are tracked in `TASK-010-data-owner-handoff.md`.
