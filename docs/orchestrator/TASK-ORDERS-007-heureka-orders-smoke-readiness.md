@@ -1,7 +1,7 @@
 # TASK-ORDERS-007 - Heureka Orders Smoke Production Readiness
 
 Date: 2026-07-01
-Status: blocked on runtime schema prerequisites
+Status: Heureka runtime prerequisites unblocked; blocked downstream on Orders-to-Warehouse reservation handoff
 Owner: Heureka Orders smoke / production readiness lane
 
 ## Intent Preservation Chain
@@ -146,20 +146,75 @@ Result: exited `2` by design because preflight found schema blockers.
 
 The mutating create/replay/Warehouse-reservation smoke was not run. The live preflight still contains `[MISSING: ...]` schema blockers, and running `--execute` would create an unsafe production mutation before the Heureka persistence prerequisites exist. No Orders repo edits, Vault changes, deploys, raw token values, raw customer data, payment details, database rows, or production order rows were produced by this verification pass.
 
+## 2026-07-01 Post-Approval Setup And Smoke Rerun
+
+The owner approved proceeding with Heureka setup. Browser inspection used the logged-in Chrome session and found `account.heureka.cz` logged in as the Heureka user. The partner/e-shop admin path redirected to the shop registration flow at `sluzby.heureka.cz/shop-registration/company`, which requires IČO and subsequent company/contact/shop details. No external Heureka registration form was submitted because those legal/contact values were not provided in this lane.
+
+Database setup was applied only after generating SQL from `prisma/schema.prisma`, checking it for destructive statements, and confirming the live `heureka_%` table inventory was empty. The applied SQL contained create-only schema work for Heureka Prisma tables and indexes. No secrets or DSNs were printed.
+
+Sanitized database result:
+
+- created tables: `heureka_accounts`, `heureka_feeds`, `heureka_offers`, `heureka_orders`, `heureka_products`, `heureka_settings`
+- active account mapping: `heureka-cz`
+- account id: present, not printed
+- API key: not set
+
+Feed settings result:
+
+- feed type: `heureka_cz`
+- shop URL: `https://flipflop.alfares.cz`
+- shop name: `FlipFlop`
+- contact email: present
+- XML feed URL for Heureka UI: `https://heureka.alfares.cz/heureka/feed?type=heureka_cz`
+- live URL status: `200`
+- content type: `application/xml; charset=utf-8`
+- feed lifecycle header: `X-Heureka-Feed-Status: valid`
+- current feed body: valid XML with no `SHOPITEM` rows until Heureka products are included/renderable
+
+Post-setup preflight:
+
+- Heureka health status: `200`
+- Catalog product status: `200`
+- Warehouse stock status: `200`
+- reservable Warehouse route count: `1`
+- selected Warehouse route: `c0de0000-0000-4000-8000-000000000013`
+- runtime schema check: completed
+- present required order tables: `heureka_accounts`, `heureka_offers`, `heureka_orders`
+- missing required order tables: none
+
+Post-setup live smoke attempt:
+
+- first POST status: `500`
+- replay POST status: `500`
+- order id presence: `false`
+- replay flag: `false`
+- reservation status presence: `false`
+- Heureka pod root cause: `OrderClientService.createOrder` received status `400` from Orders.
+- Orders pod evidence: `WarehouseReservationClient` logged `Warehouse reservation handoff failed`; Orders audit recorded `channel=heureka`, `outcome=failure`.
+
+Orders/Warehouse runtime evidence, presence only:
+
+- Orders `WAREHOUSE_RESERVATION_ENABLED`: present and `true`
+- Orders `WAREHOUSE_SERVICE_URL`: present
+- Orders `WAREHOUSE_SERVICE_TOKEN`: present
+- Warehouse service endpoint: `warehouse-microservice:3201`
+- Warehouse app pod: running
+- Warehouse logs around the same window include reservation/expiry `401` failures and reservation handoff noise.
+
 ## Blockers
 
-- `[MISSING: public.heureka_accounts]` - required by `HeurekaOrdersService.resolveAccount`.
-- `[MISSING: public.heureka_orders]` - required for local Heureka forwarding/idempotency evidence.
-- `[MISSING: public.heureka_offers]` - required for mapped Heureka offer ingestion paths.
-- `[UNKNOWN: active Heureka account mapping]` - cannot be verified until `public.heureka_accounts` exists.
-- `[UNKNOWN: successful Orders reservation handoff for Heureka]` - cannot be verified until the Heureka schema blocker is removed and the live smoke can create an order.
+- `[MISSING: successful Orders Warehouse reservation handoff for Heureka]` - Heureka now reaches Orders, but Orders fails closed when Warehouse reservation handoff does not return `reserved`.
+- `[MISSING: successful first order ingest]` - post-schema Heureka POST still returns `500` because downstream Orders returns `400`.
+- `[MISSING: successful idempotent replay]` - replay cannot pass until first create succeeds.
+- `[MISSING: orderId]` - no order id is returned while Orders rejects the create.
+- `[MISSING: reservationStatus]` - no reservation status is present while Orders rejects the create before persistence.
+- `[UNKNOWN: external Heureka e-shop registration details]` - the logged-in Heureka UI requires IČO and company/contact/shop details; no external registration form was submitted without those values.
 
 ## Unblock Plan
 
-1. Database/schema owner prepares a reviewed Heureka schema initialization or migration for `prisma/schema.prisma` tables without printing secrets.
-2. Database/schema owner applies the approved schema change to the configured `heureka` production database.
-3. Heureka owner verifies or creates an active Heureka account mapping suitable for synthetic smoke.
-4. Integration owner reruns:
+1. Orders/Warehouse owner fixes or verifies the reservation handoff credential/role/path so sellable-channel creates return Warehouse handoff status `reserved`.
+2. If external Heureka shop registration is required, owner provides IČO and approved company/contact/shop details for `sluzby.heureka.cz/shop-registration/company`.
+3. Integration owner reruns:
    - `node scripts/verify_heureka_order_ingestion_contract.js`
    - `npm --prefix shared run build`
    - `npm --prefix services/heureka-service run build`
@@ -170,10 +225,11 @@ The mutating create/replay/Warehouse-reservation smoke was not run. The live pre
 
 | Workstream | Status | Owner Role | Scope | Blockers | Validation Owner | Handoff |
 | --- | --- | --- | --- | --- | --- | --- |
-| Heureka DB schema initialization | ready now | database/schema owner | Heureka production database schema for Prisma tables only | approval for schema application; no secret exposure | database/schema owner | Report table presence and active account mapping without row data. |
-| Heureka smoke rerun | dependency-gated | integration owner | `scripts/smoke_heureka_order_ingestion_live.js` and sanitized pod execution | `[MISSING: public.heureka_accounts]`, `[MISSING: public.heureka_orders]`, `[MISSING: public.heureka_offers]` | integration owner | Rerun create/replay/reservation smoke after schema unblock. |
-| Orders/Warehouse/Catalog changes | blocked/forbidden in this lane | owning service teams | none from this thread | this lane may not edit those repos | owning service teams | Not needed unless the post-schema smoke exposes a downstream blocker. |
+| Heureka DB schema initialization | complete | database/schema owner | Heureka production database schema for Prisma tables only | none for current schema inventory | database/schema owner | Tables and `heureka-cz` active account mapping are present. |
+| Orders/Warehouse reservation handoff | ready now | Orders/Warehouse owner | Orders runtime Warehouse handoff credential/role/path | `[MISSING: successful Orders Warehouse reservation handoff for Heureka]` | Orders/Warehouse owner | Report sanitized reserve result and whether handoff status is `reserved`. |
+| External Heureka e-shop registration | blocked | owner/browser operator | `sluzby.heureka.cz/shop-registration/company` | `[UNKNOWN: external Heureka e-shop registration details]` | owner/browser operator | Provide IČO and approved company/contact/shop fields before submission. |
+| Heureka smoke rerun | dependency-gated | integration owner | `scripts/smoke_heureka_order_ingestion_live.js` and sanitized pod execution | downstream reservation handoff blocker | integration owner | Rerun create/replay/reservation smoke after Orders/Warehouse unblock. |
 
 ## Deployment
 
-No deployment was run. The new smoke runner was copied into the running pod as a temporary verifier after source validation.
+No deployment was run. The smoke runner was copied into the running pod as a temporary verifier after source validation. Runtime DB schema initialization was applied directly to the configured Heureka database after owner approval and create-only SQL validation.
