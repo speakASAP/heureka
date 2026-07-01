@@ -135,7 +135,7 @@ Status: blocked by missing owner/legal/external status evidence.
 Read-only evidence:
 
 - Public feed endpoint is reachable and returns XML with `x-heureka-feed-status: valid`.
-- Repo has no current external shop approval/import verifier route or script.
+- `npm run verify:heureka-external-readiness` records the public XML feed contract and optional protected readiness-lanes evidence without mutating external Heureka.
 - K8s external secret references do not include Heureka merchant/API key approval evidence.
 - Prisma schema has `HeurekaAccount.apiKey` and feed settings fields, but no legal/company/IČO/shop-approval model fields.
 - Existing docs indicate external Heureka previously accepted the XML check request, while feed-validity/shop status remained blocked/new/pending.
@@ -146,7 +146,7 @@ Remaining blockers:
 - `[UNKNOWN: current external Heureka import/feed-validity result]`
 - `[MISSING: owner-supplied e-shop registration legal/company fields]`
 - `[MISSING: Heureka merchant/API key approval evidence]`
-- `[MISSING: external Heureka verifier script/API contract]`
+- `[MISSING: owner/browser-operated external Heureka approval/import evidence]`
 
 ## Validation Commands
 
@@ -154,6 +154,7 @@ Run after any approved data change:
 
 ```bash
 ssh alfares 'cd /home/ssf/Documents/Github/heureka-service && kubectl -n statex-apps exec deploy/heureka-service -- npm run verify:heureka-blocked-product-lanes'
+ssh alfares 'cd /home/ssf/Documents/Github/heureka-service && npm run verify:heureka-external-readiness'
 ssh alfares 'cd /home/ssf/Documents/Github/heureka-service && curl -k -I https://heureka.alfares.cz/heureka/feed?type=heureka_cz'
 ```
 
@@ -169,4 +170,3 @@ Success conditions:
 - Products approved for sale no longer have `MISSING_PRIMARY_IMAGE`.
 - Products not intended for Heureka have explicit owner exclusion decisions.
 - External Heureka shop/import status is proven by current read-only evidence.
-
