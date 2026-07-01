@@ -780,6 +780,7 @@ td b.danger { background: #ffe8ea; color: var(--red); }
   .brand { font-size: 24px; }
   .nav { display: none; }
   .header-actions, .hero-actions { width: 100%; }
+  .header-actions, .hero-actions { flex-direction: column; align-items: stretch; }
   .primary-button, .secondary-button { width: 100%; min-height: 48px; }
   h1 { font-size: 42px; line-height: 1.02; }
   .hero-lead { font-size: 17px; }
