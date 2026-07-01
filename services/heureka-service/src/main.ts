@@ -36,7 +36,15 @@ async function bootstrap() {
   );
 
   app.setGlobalPrefix('heureka', {
-    exclude: [{ path: 'health', method: RequestMethod.GET }],
+    exclude: [
+      { path: '', method: RequestMethod.GET },
+      { path: '/', method: RequestMethod.GET },
+      { path: 'health', method: RequestMethod.GET },
+      { path: 'login', method: RequestMethod.GET },
+      { path: 'register', method: RequestMethod.GET },
+      { path: 'auth/callback', method: RequestMethod.GET },
+      { path: 'dashboard', method: RequestMethod.GET },
+    ],
   });
 
   const port =
