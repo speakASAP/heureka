@@ -18,6 +18,7 @@ export function isHeurekaServiceBackendPath(fullPath: string): boolean {
     '/heureka/feed',
     '/heureka/dashboard',
     '/heureka/products',
+    '/heureka/orders',
     '/heureka/health',
   ];
   return heurekaOwnedPrefixes.some((prefix) => pathOnly === prefix || pathOnly.startsWith(`${prefix}/`));
@@ -970,4 +971,3 @@ export class GatewayService implements OnModuleInit {
     throw new Error(`Missing required environment variable: ${key}. Please set it in your .env file.`);
   }
 }
-

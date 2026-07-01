@@ -12,7 +12,8 @@
     "verify:heureka-order-ingestion": "node scripts/verify_heureka_order_ingestion_contract.js",
     "verify:heureka-stock-readiness-live": "node scripts/verify_heureka_stock_readiness_live.js",
     "verify:heureka-blocked-product-lanes": "node scripts/verify_heureka_blocked_product_lanes.js",
-    "verify:heureka-external-readiness": "node scripts/verify_heureka_external_readiness.js"
+    "verify:heureka-external-readiness": "node scripts/verify_heureka_external_readiness.js",
+    "verify:health-dependencies": "npx ts-node --skip-ignore --compiler-options '{\"types\":[\"node\"]}' shared/health/health.service.self-test.ts"
   },
   "dependencies": {
     "@nestjs/axios": "^3.0.1",

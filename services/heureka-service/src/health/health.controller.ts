@@ -13,5 +13,9 @@ export class HealthController {
   async getHealth() {
     return this.healthService.getHealthStatus('heureka-service');
   }
-}
 
+  @Get('dependencies')
+  async getDependencyHealth() {
+    return this.healthService.getDependencyHealthStatus('heureka-service');
+  }
+}

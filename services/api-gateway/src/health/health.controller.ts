@@ -9,5 +9,9 @@ export class HealthController {
   async getHealth() {
     return this.healthService.getHealthStatus('api-gateway');
   }
-}
 
+  @Get('dependencies')
+  async getDependencyHealth() {
+    return this.healthService.getDependencyHealthStatus('api-gateway');
+  }
+}

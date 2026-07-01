@@ -16,6 +16,9 @@ async function main(): Promise<void> {
     '/heureka/dashboard/catalog-products',
     '/heureka/dashboard/products/product-1/listing',
     '/heureka/products/product-1/status',
+    '/heureka/orders',
+    '/heureka/orders/order-1',
+    '/heureka/orders/ingest',
     '/heureka/health',
   ];
 
