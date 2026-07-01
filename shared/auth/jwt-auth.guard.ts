@@ -29,14 +29,17 @@ export class JwtAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const startTime = Date.now();
+    const debugAuthGuard = process.env.NODE_ENV === 'development' || process.env.AUTH_GUARD_DEBUG === 'true';
     const timestamp = new Date().toISOString();
     const path = request.url || request.path || 'unknown';
     
-    console.log(`[${timestamp}] [TIMING] JwtAuthGuard.canActivate START - Guard execution started`, {
-      path,
-      method: request.method,
-    });
-    
+    if (debugAuthGuard) {
+      console.log(`[${timestamp}] [TIMING] JwtAuthGuard.canActivate START - Guard execution started`, {
+        path,
+        method: request.method,
+      });
+    }
+
     try {
       const tokenExtractStartTime = Date.now();
       const token = this.extractTokenFromHeader(request);
@@ -62,30 +65,15 @@ export class JwtAuthGuard implements CanActivate {
         const validationDuration = Date.now() - validationStartTime;
         const totalGuardDuration = Date.now() - startTime;
 
-        console.log(`[${new Date().toISOString()}] [TIMING] JwtAuthGuard.canActivate COMPLETE (${totalGuardDuration}ms total, token extract: ${tokenExtractDuration}ms, validation: ${validationDuration}ms)`, {
-          path,
-          method: request.method,
-          totalDurationMs: totalGuardDuration,
-          tokenExtractDurationMs: tokenExtractDuration,
-          validationDurationMs: validationDuration,
-        });
-
-        // Log decoded token structure for debugging (temporarily enabled to diagnose issue)
-        console.log('[JwtAuthGuard] Decoded token structure', {
-          keys: Object.keys(decoded),
-          hasId: !!decoded.id,
-          hasSub: !!decoded.sub,
-          hasUserId: !!decoded.userId,
-          hasEmail: !!decoded.email,
-          decodedSample: {
-            id: decoded.id,
-            sub: decoded.sub,
-            userId: decoded.userId,
-            email: decoded.email,
-            iat: decoded.iat,
-            exp: decoded.exp,
-          },
-        });
+        if (debugAuthGuard) {
+          console.log(`[${new Date().toISOString()}] [TIMING] JwtAuthGuard.canActivate COMPLETE (${totalGuardDuration}ms total, token extract: ${tokenExtractDuration}ms, validation: ${validationDuration}ms)`, {
+            path,
+            method: request.method,
+            totalDurationMs: totalGuardDuration,
+            tokenExtractDurationMs: tokenExtractDuration,
+            validationDurationMs: validationDuration,
+          });
+        }
 
         // Transform decoded token to AuthUser format
         // Try multiple possible field names for user ID

@@ -169,5 +169,82 @@ export class CatalogClientService {
     }
   }
 
-}
+  /**
+   * Get protected Heureka content preview rendered by Catalog.
+   */
+  async getHeurekaContentPreview(productId: string): Promise<any | null> {
+    return this.getProtectedHeurekaProductResource(productId, 'content-previews/heureka', 'Heureka content preview');
+  }
 
+  /**
+   * Get protected Heureka marketplace fields from Catalog.
+   */
+  async getHeurekaMarketplaceFields(productId: string): Promise<any | null> {
+    return this.getProtectedHeurekaProductResource(productId, 'marketplace-fields/heureka', 'Heureka marketplace fields');
+  }
+
+  /**
+   * Update protected Heureka marketplace fields in Catalog.
+   */
+  async updateHeurekaMarketplaceFields(productId: string, input: Record<string, unknown>): Promise<any | null> {
+    return this.updateProtectedHeurekaProductResource(productId, 'marketplace-fields/heureka', input, 'Heureka marketplace fields');
+  }
+
+  private async getProtectedHeurekaProductResource(productId: string, path: string, label: string): Promise<any | null> {
+    const headers = this.getCatalogInternalServiceHeaders();
+    if (!headers) {
+      this.logger.warn(`${label} not available for product ${productId}: internal service token is not configured`, 'CatalogClient');
+      return null;
+    }
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(`${this.baseUrl}/api/products/${encodeURIComponent(productId)}/${path}`, { headers })
+      );
+      return response.data?.data || null;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(`${label} not available for product ${productId}: ${errorMessage}`, 'CatalogClient');
+      return null;
+    }
+  }
+
+  private async updateProtectedHeurekaProductResource(productId: string, path: string, input: Record<string, unknown>, label: string): Promise<any | null> {
+    const headers = this.getCatalogInternalServiceHeaders();
+    if (!headers) {
+      this.logger.warn(`${label} update skipped for product ${productId}: internal service token is not configured`, 'CatalogClient');
+      return null;
+    }
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.put(`${this.baseUrl}/api/products/${encodeURIComponent(productId)}/${path}`, input, { headers })
+      );
+      return response.data?.data || null;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(`${label} update failed for product ${productId}: ${errorMessage}`, 'CatalogClient');
+      return null;
+    }
+  }
+
+  private getCatalogInternalServiceHeaders(): Record<string, string> | null {
+    const internalToken = (
+      process.env.CATALOG_INTERNAL_SERVICE_TOKEN ||
+      process.env.HEUREKA_INTERNAL_SERVICE_TOKEN ||
+      process.env.INTERNAL_SERVICE_TOKEN ||
+      process.env.JWT_TOKEN ||
+      ''
+    ).trim();
+
+    if (!internalToken) {
+      return null;
+    }
+
+    return {
+      'x-internal-service-token': internalToken,
+      'x-service-name': 'heureka-service',
+    };
+  }
+
+}

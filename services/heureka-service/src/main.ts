@@ -35,6 +35,20 @@ async function bootstrap() {
     }),
   );
 
+  const dashboardShellRoutes = new Set([
+    '/dashboard/orders',
+    '/dashboard/operations',
+    '/dashboard/settings',
+  ]);
+  app.use((req: any, _res: any, next: () => void) => {
+    const path = req.path || String(req.url || '').split('?')[0];
+    if (req.method === 'GET' && dashboardShellRoutes.has(path)) {
+      const queryStart = String(req.url || '').indexOf('?');
+      req.url = `/dashboard${queryStart >= 0 ? String(req.url).slice(queryStart) : ''}`;
+    }
+    next();
+  });
+
   app.setGlobalPrefix('heureka', {
     exclude: [
       { path: '', method: RequestMethod.GET },
@@ -45,6 +59,7 @@ async function bootstrap() {
       { path: 'auth/callback', method: RequestMethod.GET },
       { path: 'dashboard', method: RequestMethod.GET },
       { path: 'dashboard/products', method: RequestMethod.GET },
+      { path: 'dashboard/feed', method: RequestMethod.GET },
       { path: 'dashboard/admin/users', method: RequestMethod.GET },
     ],
   });

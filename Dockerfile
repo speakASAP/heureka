@@ -57,6 +57,6 @@ COPY --from=builder /app/shared ./shared
 # Ensure @heureka/shared is properly resolved in node_modules
 RUN mkdir -p /app/node_modules/@heureka && ln -sf ../../shared /app/node_modules/@heureka/shared
 
-EXPOSE 3000
+EXPOSE 3800
 
 CMD ["node", "dist/main.js"]

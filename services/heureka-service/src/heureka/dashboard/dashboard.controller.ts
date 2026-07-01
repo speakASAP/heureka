@@ -54,6 +54,51 @@ export class DashboardController {
     return { success: true, data: await this.dashboardService.regenerateFeed(req.user, body?.feedType || 'heureka_cz') };
   }
 
+  @Get('orders')
+  async orders(@Req() req: any, @Query() query: Record<string, string>) {
+    return { success: true, data: await this.dashboardService.listOrders(req.user, query) };
+  }
+
+  @Get('orders/:id')
+  async order(@Req() req: any, @Param('id') id: string) {
+    return { success: true, data: await this.dashboardService.getOrderDetail(req.user, id) };
+  }
+
+  @Get('feed/status')
+  async feedStatus(@Req() req: any, @Query('feedType') feedType = 'heureka_cz') {
+    return { success: true, data: await this.dashboardService.getDashboardFeedStatus(req.user, feedType) };
+  }
+
+  @Get('feed/history')
+  async feedHistory(@Req() req: any, @Query('feedType') feedType = 'heureka_cz') {
+    return { success: true, data: await this.dashboardService.getDashboardFeedHistory(req.user, feedType) };
+  }
+
+  @Get('feed/settings')
+  async feedSettings(@Req() req: any, @Query('feedType') feedType = 'heureka_cz') {
+    return { success: true, data: await this.dashboardService.getSettings(req.user, feedType) };
+  }
+
+  @Put('feed/settings')
+  async updateFeedSettings(@Req() req: any, @Body() body: Record<string, unknown>) {
+    return { success: true, data: await this.dashboardService.updateSettings(req.user, body || {}) };
+  }
+
+  @Get('operations')
+  async operations(@Req() req: any, @Query('feedType') feedType = 'heureka_cz') {
+    return { success: true, data: await this.dashboardService.getOperations(req.user, feedType) };
+  }
+
+  @Get('operations/history')
+  async operationsHistory(@Req() req: any, @Query('feedType') feedType = 'heureka_cz') {
+    return { success: true, data: await this.dashboardService.getOperationsHistory(req.user, feedType) };
+  }
+
+  @Get('settings')
+  async settings(@Req() req: any, @Query('feedType') feedType = 'heureka_cz') {
+    return { success: true, data: await this.dashboardService.getSettings(req.user, feedType) };
+  }
+
   @Get('admin/registered-users')
   async adminUsers(@Req() req: any, @Query() query: Record<string, string>) {
     return { success: true, data: await this.dashboardService.getAdminUsers(req.user, req.headers.authorization, query) };

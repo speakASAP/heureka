@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { CatalogClientService, LoggerService, PrismaService, WarehouseClientService } from '@heureka/shared';
@@ -17,6 +17,12 @@ type ProductListQuery = {
   page?: number;
   limit?: number;
   feedType?: string;
+};
+
+type CatalogMarketplaceProfileClient = CatalogClientService & {
+  getHeurekaContentPreview?: (productId: string) => Promise<any | null>;
+  getHeurekaMarketplaceFields?: (productId: string) => Promise<any | null>;
+  updateHeurekaMarketplaceFields?: (productId: string, input: Record<string, unknown>) => Promise<any | null>;
 };
 
 @Injectable()
@@ -149,13 +155,15 @@ export class DashboardService {
       throw new NotFoundException(`Catalog product ${productId} not found`);
     }
 
-    const [stock, pricing, media, includedRow, offer, settings] = await Promise.all([
+    const [stock, pricing, media, includedRow, offer, settings, contentPreview, marketplaceFields] = await Promise.all([
       this.warehouseClient.getTotalAvailable(productId),
       this.catalogClient.getProductPricing(productId),
       this.catalogClient.getProductMedia(productId),
       this.prisma.heurekaProduct.findUnique({ where: { productId } }),
       this.prisma.heurekaOffer.findFirst({ where: { productId }, orderBy: { updatedAt: 'desc' } }),
       this.prisma.heurekaSettings.findUnique({ where: { feedType } }).catch(() => null),
+      this.getHeurekaContentPreview(productId),
+      this.getHeurekaMarketplaceFields(productId),
     ]);
 
     const dashboardProduct = this.buildDashboardProduct(product, {
@@ -166,17 +174,17 @@ export class DashboardService {
       pricing,
       media,
     });
+    const previewPlainText = this.resolvePreviewPlainText(contentPreview);
+    const listing = this.buildListing(product, offer, pricing, stock, previewPlainText, marketplaceFields);
 
     return {
       ...dashboardProduct,
+      category: listing.category || dashboardProduct.category,
       settingsActive: Boolean(settings?.isActive),
-      listing: this.buildListing(product, offer, pricing, stock),
+      listing,
       media: this.normalizeMedia(media),
-      gaps: this.getProductGaps(product, pricing, media, stock),
-      catalogMarketplaceProfile: {
-        status: 'dependency_gated',
-        missing: ['[MISSING: Catalog heureka marketplace profile connector]'],
-      },
+      gaps: this.getProductGaps(product, pricing, media, stock, previewPlainText, listing.category),
+      catalogMarketplaceProfile: this.buildCatalogMarketplaceProfile(contentPreview, marketplaceFields),
     };
   }
 
@@ -204,6 +212,8 @@ export class DashboardService {
     const offer = existing
       ? await this.prisma.heurekaOffer.update({ where: { id: existing.id }, data })
       : await this.prisma.heurekaOffer.create({ data });
+
+    await this.updateHeurekaMarketplaceOverrides(productId, title, body);
 
     if (body.includeInFeed !== undefined) {
       await this.setProductIncluded(actor, productId, body.includeInFeed !== false);
@@ -257,6 +267,140 @@ export class DashboardService {
       feedType,
       xmlLength: result.xml.length,
       validation: result.validation,
+    };
+  }
+
+  async listOrders(user: DashboardUser, query: Record<string, string>) {
+    this.normalizeUser(user);
+    const limit = this.clampNumber(Number(query.limit), 25, 1, 100);
+    const status = this.optionalString(query.status);
+    const where = status && status !== 'all' ? { status } : {};
+
+    const [orders, total, pending, forwarded, failed, cancelled] = await Promise.all([
+      this.prisma.heurekaOrder.findMany({ where, orderBy: { createdAt: 'desc' }, take: limit }),
+      this.prisma.heurekaOrder.count({ where }),
+      this.prisma.heurekaOrder.count({ where: { status: 'pending' } }),
+      this.prisma.heurekaOrder.count({ where: { forwarded: true } }),
+      this.prisma.heurekaOrder.count({ where: { status: 'failed' } }),
+      this.prisma.heurekaOrder.count({ where: { status: 'cancelled' } }),
+    ]);
+
+    return {
+      limit,
+      status: status || 'all',
+      total,
+      statusCounts: { pending, forwarded, failed, cancelled },
+      orders: orders.map((order) => this.serializeOrder(order)),
+    };
+  }
+
+  async getOrderDetail(user: DashboardUser, id: string) {
+    this.normalizeUser(user);
+    const order = await this.prisma.heurekaOrder.findUnique({ where: { id } });
+    if (!order) {
+      throw new NotFoundException(`Heureka order ${id} not found`);
+    }
+    return this.serializeOrder(order);
+  }
+
+  async getDashboardFeedStatus(user: DashboardUser, feedType = 'heureka_cz') {
+    this.normalizeUser(user);
+    const [feedStatus, settings] = await Promise.all([
+      this.feedService.getFeedStatus(feedType),
+      this.prisma.heurekaSettings.findUnique({ where: { feedType } }).catch(() => null),
+    ]);
+    return {
+      feedType,
+      status: feedStatus,
+      settings: settings ? this.serializeSettings(settings) : null,
+      missing: settings ? [] : ['[MISSING: active Heureka feed settings]'],
+    };
+  }
+
+  async getDashboardFeedHistory(user: DashboardUser, feedType = 'heureka_cz') {
+    this.normalizeUser(user);
+    const history = await this.prisma.heurekaFeed.findMany({ where: { feedType }, orderBy: { createdAt: 'desc' }, take: 25 });
+    return {
+      feedType,
+      feeds: history.map((feed) => this.serializeFeed(feed)),
+    };
+  }
+
+  async updateSettings(user: DashboardUser, body: Record<string, unknown>) {
+    const actor = this.requireAdmin(user);
+    const feedType = this.optionalString(body.feedType) || 'heureka_cz';
+    const existing = await this.prisma.heurekaSettings.findUnique({ where: { feedType } }).catch(() => null);
+    if (!existing) {
+      throw new NotFoundException('[MISSING: active Heureka feed settings]');
+    }
+
+    const data = this.buildSettingsPatch(body);
+    if (!Object.keys(data).length) {
+      throw new BadRequestException('No supported Heureka settings fields provided');
+    }
+
+    const settings = await this.prisma.heurekaSettings.update({ where: { feedType }, data });
+    this.logger.log('Heureka feed settings updated from dashboard', {
+      actorId: actor.id,
+      actorEmail: actor.email,
+      feedType,
+      changedFields: Object.keys(data),
+    });
+    return {
+      feedType,
+      settings: this.serializeSettings(settings),
+      runtime: this.getRuntimeStatus(),
+      missing: [],
+    };
+  }
+
+  async getOperations(user: DashboardUser, feedType = 'heureka_cz') {
+    this.normalizeUser(user);
+    const [summary, feedStatus, feedHistory, settings, recentOrders] = await Promise.all([
+      this.getSummary(user, feedType),
+      this.feedService.getFeedStatus(feedType).catch((error: any) => ({
+        status: 'unavailable',
+        message: error?.message || 'Feed status unavailable',
+      })),
+      this.prisma.heurekaFeed.findMany({ where: { feedType }, orderBy: { createdAt: 'desc' }, take: 10 }),
+      this.prisma.heurekaSettings.findUnique({ where: { feedType } }).catch(() => null),
+      this.prisma.heurekaOrder.findMany({ orderBy: { createdAt: 'desc' }, take: 5 }),
+    ]);
+
+    return {
+      feedType,
+      summary,
+      feedStatus,
+      feedHistory: feedHistory.map((feed) => this.serializeFeed(feed)),
+      settings: settings ? this.serializeSettings(settings) : null,
+      recentOrders: recentOrders.map((order) => this.serializeOrder(order)),
+      runtime: this.getRuntimeStatus(),
+      nextActions: this.buildOperationActions(summary, settings),
+    };
+  }
+
+  async getOperationsHistory(user: DashboardUser, feedType = 'heureka_cz') {
+    this.normalizeUser(user);
+    const [feedHistory, orders] = await Promise.all([
+      this.prisma.heurekaFeed.findMany({ where: { feedType }, orderBy: { createdAt: 'desc' }, take: 25 }),
+      this.prisma.heurekaOrder.findMany({ orderBy: { createdAt: 'desc' }, take: 25 }),
+    ]);
+    return {
+      feedType,
+      feeds: feedHistory.map((feed) => this.serializeFeed(feed)),
+      orders: orders.map((order) => this.serializeOrder(order)),
+      missing: ['[MISSING: operation/audit log contract]'],
+    };
+  }
+
+  async getSettings(user: DashboardUser, feedType = 'heureka_cz') {
+    this.normalizeUser(user);
+    const settings = await this.prisma.heurekaSettings.findUnique({ where: { feedType } }).catch(() => null);
+    return {
+      feedType,
+      settings: settings ? this.serializeSettings(settings) : null,
+      runtime: this.getRuntimeStatus(),
+      missing: settings ? [] : ['[MISSING: active Heureka feed settings]'],
     };
   }
 
@@ -408,27 +552,136 @@ export class DashboardService {
     };
   }
 
-  private buildListing(product: any, offer: any, pricing: any, stock: number) {
+  private async getHeurekaContentPreview(productId: string): Promise<any | null> {
+    const catalogClient = this.catalogClient as CatalogMarketplaceProfileClient;
+    if (typeof catalogClient.getHeurekaContentPreview !== 'function') {
+      this.logger.warn('Catalog Heureka content preview client method is unavailable');
+      return null;
+    }
+    return catalogClient.getHeurekaContentPreview(productId);
+  }
+
+  private async getHeurekaMarketplaceFields(productId: string): Promise<any | null> {
+    const catalogClient = this.catalogClient as CatalogMarketplaceProfileClient;
+    if (typeof catalogClient.getHeurekaMarketplaceFields !== 'function') {
+      this.logger.warn('Catalog Heureka marketplace fields client method is unavailable');
+      return null;
+    }
+    return catalogClient.getHeurekaMarketplaceFields(productId);
+  }
+
+  private async updateHeurekaMarketplaceOverrides(productId: string, title: string | null, body: any) {
+    const catalogClient = this.catalogClient as CatalogMarketplaceProfileClient;
+    if (typeof catalogClient.updateHeurekaMarketplaceFields !== 'function') {
+      this.logger.warn('Catalog Heureka marketplace fields update client method is unavailable');
+      return null;
+    }
+
+    const overrides = this.buildHeurekaMarketplaceOverrides(title, body);
+    if (!Object.keys(overrides).length) return null;
+
+    return catalogClient.updateHeurekaMarketplaceFields(productId, { overrides, status: 'draft' });
+  }
+
+  private buildListing(product: any, offer: any, pricing: any, stock: number, descriptionFallback?: string | null, marketplaceFields?: any) {
+    const overrides = this.resolveMarketplaceOverrides(marketplaceFields);
     return {
-      title: offer?.title || product.title || product.name || '',
+      title: offer?.title || overrides.productName || product.title || product.name || '',
       price: this.toNumber(offer?.price ?? pricing?.priceVat ?? pricing?.priceWithVat ?? pricing?.basePrice ?? pricing?.price),
       stockQuantity: Number(offer?.stockQuantity ?? stock ?? 0),
       isActive: offer?.isActive !== false,
-      description: product.description || '',
-      category: product.categoryText || product.categoryPath || product.categoryName || product.category || '',
+      description: product.description || descriptionFallback || '',
+      category: overrides.categoryText || product.categoryText || product.categoryPath || product.categoryName || product.category || '',
       ean: product.ean || product.barcode || '',
       brand: product.brand || product.manufacturer || '',
     };
   }
 
-  private getProductGaps(product: any, pricing: any, media: any[], stock: number) {
+  private buildHeurekaMarketplaceOverrides(title: string | null, body: any) {
+    const overrides: Record<string, unknown> = {};
+    const productName = this.optionalString(body.productName ?? body.title ?? title);
+    const categoryText = this.optionalString(body.categoryText ?? body.category ?? body.CATEGORYTEXT);
+    const deliveryDate = this.optionalNumber(body.deliveryDate ?? body.delivery_date);
+    const deliveryPrice = this.optionalNumber(body.deliveryPrice ?? body.delivery);
+
+    if (productName) overrides.productName = productName;
+    if (categoryText) overrides.categoryText = categoryText;
+    if (deliveryDate !== null) overrides.deliveryDate = deliveryDate;
+    if (deliveryPrice !== null) overrides.deliveryPrice = deliveryPrice;
+
+    return overrides;
+  }
+
+  private buildCatalogMarketplaceProfile(contentPreview: any, marketplaceFields: any) {
+    const hasContentPreview = contentPreview !== null && contentPreview !== undefined;
+    const hasMarketplaceFields = marketplaceFields !== null && marketplaceFields !== undefined;
+
+    if (!hasContentPreview && !hasMarketplaceFields) {
+      return {
+        status: 'dependency_gated',
+        missing: ['[MISSING: Catalog heureka marketplace profile connector]'],
+      };
+    }
+
+    return {
+      status: 'available',
+      contentPreview: hasContentPreview ? contentPreview : null,
+      marketplaceFields: hasMarketplaceFields ? marketplaceFields : null,
+      missing: [],
+    };
+  }
+
+  private resolvePreviewPlainText(contentPreview: any): string | null {
+    const candidates = [
+      contentPreview?.content?.plainText,
+      contentPreview?.plainText,
+      contentPreview?.plain_text,
+      contentPreview?.content?.plain_text,
+      contentPreview?.preview?.content?.plainText,
+      contentPreview?.preview?.plainText,
+      contentPreview?.description,
+    ];
+
+    for (const candidate of candidates) {
+      const text = this.optionalString(candidate);
+      if (text) return text;
+    }
+
+    return null;
+  }
+
+  private resolveMarketplaceOverrides(marketplaceFields: any) {
+    const profileOverrides = marketplaceFields?.profile?.overrides && typeof marketplaceFields.profile.overrides === 'object'
+      ? marketplaceFields.profile.overrides
+      : {};
+    const fieldValue = (key: string) => {
+      const field = Array.isArray(marketplaceFields?.fields)
+        ? marketplaceFields.fields.find((item: any) => item?.key === key)
+        : null;
+      return this.optionalString(field?.value);
+    };
+
+    return {
+      productName: this.optionalString(profileOverrides.productName) || fieldValue('productName'),
+      categoryText: (
+        this.optionalString(profileOverrides.categoryText) ||
+        this.optionalString(profileOverrides.categoryPath) ||
+        this.optionalString(profileOverrides.category) ||
+        fieldValue('categoryText')
+      ),
+      deliveryDate: this.optionalNumber(profileOverrides.deliveryDate) ?? this.optionalNumber(fieldValue('deliveryDate')),
+      deliveryPrice: this.optionalNumber(profileOverrides.deliveryPrice) ?? this.optionalNumber(fieldValue('deliveryPrice')),
+    };
+  }
+
+  private getProductGaps(product: any, pricing: any, media: any[], stock: number, descriptionFallback?: string | null, categoryFallback?: string | null) {
     const gaps: string[] = [];
     if (!this.getCatalogProductId(product)) gaps.push('catalog_product_id');
     if (!(product.title || product.name || product.productName)) gaps.push('product_name');
-    if (!product.description) gaps.push('description');
+    if (!(product.description || descriptionFallback)) gaps.push('description');
     if (!(product.ean || product.barcode)) gaps.push('ean');
     if (!(product.brand || product.manufacturer)) gaps.push('manufacturer');
-    if (!(product.categoryText || product.categoryPath || product.categoryName || product.category)) gaps.push('category');
+    if (!(product.categoryText || product.categoryPath || product.categoryName || product.category || categoryFallback)) gaps.push('category');
     if (!this.toNumber(pricing?.priceVat ?? pricing?.priceWithVat ?? pricing?.basePrice ?? pricing?.price)) gaps.push('price');
     if (!media.length) gaps.push('image');
     if (Number(stock || 0) <= 0) gaps.push('stock');
@@ -544,5 +797,90 @@ export class DashboardService {
       createdAt: feed.createdAt,
       updatedAt: feed.updatedAt,
     };
+  }
+
+  private serializeOrder(order: any) {
+    return {
+      id: order.id,
+      accountId: order.accountId,
+      externalOrderId: order.heurekaOrderId,
+      orderId: order.orderId,
+      customerEmail: order.customerEmail,
+      customerPhone: order.customerPhone,
+      total: this.toNumber(order.total) ?? 0,
+      currency: order.currency,
+      status: order.status,
+      forwarded: Boolean(order.forwarded),
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    };
+  }
+
+  private serializeSettings(settings: any) {
+    return {
+      id: settings.id,
+      feedType: settings.feedType,
+      shopName: settings.shopName,
+      shopUrl: settings.shopUrl,
+      contactEmail: settings.contactEmail,
+      contactPhone: settings.contactPhone,
+      deliveryDays: settings.deliveryDays,
+      deliveryPrice: this.toNumber(settings.deliveryPrice),
+      freeDeliveryThreshold: this.toNumber(settings.freeDeliveryThreshold),
+      currency: settings.currency,
+      isActive: Boolean(settings.isActive),
+      createdAt: settings.createdAt,
+      updatedAt: settings.updatedAt,
+    };
+  }
+
+  private buildSettingsPatch(body: Record<string, unknown>) {
+    const data: Record<string, unknown> = {};
+    const textFields = ['shopName', 'shopUrl', 'contactEmail', 'contactPhone', 'currency'];
+    for (const field of textFields) {
+      if (body[field] === undefined) continue;
+      const value = this.optionalString(body[field]);
+      if (value !== null || field === 'contactPhone') data[field] = value;
+    }
+
+    if (body.deliveryDays !== undefined) {
+      const value = this.optionalNumber(body.deliveryDays);
+      if (value !== null) data.deliveryDays = Math.max(0, Math.trunc(value));
+    }
+    if (body.deliveryPrice !== undefined) {
+      const value = this.optionalNumber(body.deliveryPrice);
+      if (value !== null) data.deliveryPrice = value;
+    }
+    if (body.freeDeliveryThreshold !== undefined) {
+      const value = this.optionalNumber(body.freeDeliveryThreshold);
+      if (value !== null) data.freeDeliveryThreshold = value;
+    }
+    if (body.isActive !== undefined) {
+      data.isActive = body.isActive === true || String(body.isActive).toLowerCase() === 'true';
+    }
+
+    return data;
+  }
+
+  private getRuntimeStatus() {
+    return {
+      shopUrl: process.env.SHOP_URL || 'https://heureka.alfares.cz',
+      feedUrl: `${process.env.SHOP_URL || 'https://heureka.alfares.cz'}/heureka/feed?type=heureka_cz`,
+      healthUrl: `${process.env.SHOP_URL || 'https://heureka.alfares.cz'}/health`,
+      authServiceUrl: process.env.AUTH_SERVICE_URL || 'https://auth.alfares.cz',
+      catalogServiceUrl: process.env.CATALOG_SERVICE_URL || 'http://catalog-microservice:3200',
+      ordersServiceUrl: process.env.ORDERS_SERVICE_URL || process.env.ORDER_SERVICE_URL || null,
+      loggingConfigured: Boolean(process.env.LOGGING_SERVICE_URL),
+      warehouseConfigured: Boolean(process.env.WAREHOUSE_SERVICE_URL || process.env.WAREHOUSE_BASE_URL),
+    };
+  }
+
+  private buildOperationActions(summary: any, settings: any) {
+    const actions: string[] = [];
+    if (!settings?.isActive) actions.push('activate_heureka_feed_settings');
+    if (Number(summary?.needsData || 0) > 0) actions.push('resolve_catalog_product_gaps');
+    if (Number(summary?.includedProducts || 0) > 0) actions.push('regenerate_feed');
+    if (!actions.length) actions.push('monitor_feed_and_orders');
+    return actions;
   }
 }

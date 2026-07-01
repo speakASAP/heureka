@@ -40,6 +40,12 @@ export class PublicController {
     return this.dashboard();
   }
 
+  @Get('dashboard/feed')
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  dashboardFeed() {
+    return this.dashboard();
+  }
+
   @Get('dashboard/admin/users')
   @Header('Content-Type', 'text/html; charset=utf-8')
   dashboardAdminUsers() {
@@ -316,8 +322,11 @@ export class PublicController {
       <a href="/dashboard" data-dashboard-link="feed"><span class="nav-icon">${this.icon('home')}</span>Overview</a>
       <a href="/dashboard/products" data-dashboard-link="products"><span class="nav-icon">${this.icon('database')}</span>Products</a>
       <a href="/dashboard/products" data-dashboard-link="products" class="nav-child">Catalog products</a>
-      <a href="/dashboard" data-dashboard-link="feed" class="nav-child">Feed</a>
+      <a href="/dashboard/feed" data-dashboard-link="feed" class="nav-child">Feed</a>
       <a href="/dashboard/products" data-dashboard-link="products" class="nav-child">Edit queue</a>
+      <a href="/dashboard/orders" data-dashboard-link="orders"><span class="nav-icon">${this.icon('cart')}</span>Orders</a>
+      <a href="/dashboard/operations" data-dashboard-link="operations"><span class="nav-icon">${this.icon('chart')}</span>Operations</a>
+      <a href="/dashboard/settings" data-dashboard-link="settings"><span class="nav-icon">${this.icon('settings')}</span>Settings</a>
       <a href="/dashboard/admin/users" id="admin-link" data-dashboard-link="admin" hidden><span class="nav-icon">${this.icon('shield')}</span>Admin</a>
       <a href="/dashboard/admin/users" id="admin-users-link" data-dashboard-link="admin" class="nav-child" hidden>Users</a>
     </nav>
@@ -382,6 +391,53 @@ export class PublicController {
           </div>
         </div>
         <aside class="listing-panel" id="listing-panel"></aside>
+      </section>
+      <section class="admin-panel" id="orders-section" hidden>
+        <div class="products-toolbar">
+          <div>
+            <h2>Orders</h2>
+            <p id="orders-count">Loading Heureka orders</p>
+          </div>
+          <select id="orders-status-filter" aria-label="Order status"><option value="all">All statuses</option><option value="pending">Pending</option><option value="failed">Failed</option><option value="cancelled">Cancelled</option></select>
+        </div>
+        <div id="orders-metrics" class="dashboard-metrics"></div>
+        <div class="table-scroll">
+          <table class="dashboard-table">
+            <thead>
+              <tr><th>External ID</th><th>Central order</th><th>Customer</th><th>Total</th><th>Status</th><th>Forwarded</th><th>Created</th></tr>
+            </thead>
+            <tbody id="orders-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="admin-panel" id="operations-section" hidden>
+        <div class="products-toolbar">
+          <div>
+            <h2>Operations</h2>
+            <p>Feed generation, runtime wiring and recent activity</p>
+          </div>
+          <button class="secondary-button light button-reset" id="operations-regenerate-feed" type="button">${this.icon('refresh')} Regenerate feed</button>
+        </div>
+        <div id="operations-metrics" class="dashboard-metrics"></div>
+        <div class="table-scroll">
+          <table class="dashboard-table">
+            <thead>
+              <tr><th>Feed type</th><th>Status</th><th>Products</th><th>Generated</th><th>URL</th></tr>
+            </thead>
+            <tbody id="feed-history-body"></tbody>
+          </table>
+        </div>
+        <div class="dashboard-notice" id="runtime-status"></div>
+      </section>
+      <section class="admin-panel" id="settings-section" hidden>
+        <div class="products-toolbar">
+          <div>
+            <h2>Settings</h2>
+            <p>Read-only channel configuration and runtime endpoints</p>
+          </div>
+        </div>
+        <div id="settings-metrics" class="dashboard-metrics"></div>
+        <div class="dashboard-notice" id="settings-body"></div>
       </section>
       <section class="admin-panel" id="admin-section" hidden>
         <div class="products-toolbar">
@@ -558,16 +614,25 @@ export class PublicController {
 
   function setActiveDashboardRoute() {
     var path = window.location.pathname;
-    var key = path.indexOf('/dashboard/admin') === 0 ? 'admin' : (path === '/dashboard' ? 'feed' : 'products');
+    var key = path.indexOf('/dashboard/admin') === 0 ? 'admin'
+      : (path.indexOf('/dashboard/orders') === 0 ? 'orders'
+      : (path.indexOf('/dashboard/operations') === 0 ? 'operations'
+      : (path.indexOf('/dashboard/settings') === 0 ? 'settings'
+      : (path === '/dashboard' || path.indexOf('/dashboard/feed') === 0 ? 'feed' : 'products'))));
     Array.prototype.forEach.call(document.querySelectorAll('[data-dashboard-link]'), function (link) {
       link.classList.toggle('active', link.getAttribute('data-dashboard-link') === key);
     });
-    var products = document.getElementById('products-section');
-    var admin = document.getElementById('admin-section');
-    if (products && admin) {
-      products.hidden = key === 'admin';
-      admin.hidden = key !== 'admin';
-    }
+    var activeSection = key === 'feed' ? 'products' : key;
+    var sections = {
+      products: document.getElementById('products-section'),
+      orders: document.getElementById('orders-section'),
+      operations: document.getElementById('operations-section'),
+      settings: document.getElementById('settings-section'),
+      admin: document.getElementById('admin-section')
+    };
+    Object.keys(sections).forEach(function (sectionKey) {
+      if (sections[sectionKey]) sections[sectionKey].hidden = sectionKey !== activeSection;
+    });
     return key;
   }
 
@@ -628,7 +693,7 @@ export class PublicController {
       '<div class="listing-tabs"><button class="active button-reset" type="button">Listing</button><button class="button-reset" type="button">Heureka</button><button class="button-reset" type="button">History</button><button class="button-reset" type="button">Data quality</button></div>' +
       '<form class="listing-form" id="listing-form">' +
       '<label>Product name<input name="title" value="' + escapeHtml(listing.title || '') + '"></label>' +
-      '<label>Category<select><option>' + escapeHtml(product.category || 'Elektronika > Catalog product') + '</option></select></label>' +
+      '<label>Heureka category<input name="category" value="' + escapeHtml(listing.category || product.category || '') + '"></label>' +
       '<label>EAN<input readonly value="' + escapeHtml(listing.ean || '') + '"></label>' +
       '<div class="form-grid"><label>Brand<input readonly value="' + escapeHtml(listing.brand || '') + '"></label><label>MPN<input readonly value="' + escapeHtml(product.sku || '') + '"></label></div>' +
       '<div class="form-grid"><label>Price CZK<input name="price" type="number" min="0" step="0.01" value="' + escapeHtml(listing.price || '') + '"></label><label>Stock<input name="stockQuantity" type="number" min="0" value="' + escapeHtml(listing.stockQuantity || 0) + '"></label></div>' +
@@ -647,6 +712,7 @@ export class PublicController {
           title: form.title.value,
           price: Number(form.price.value),
           stockQuantity: Number(form.stockQuantity.value),
+          category: form.category.value,
           includeInFeed: form.includeInFeed.checked,
           isActive: form.isActive.checked
         }
@@ -660,10 +726,123 @@ export class PublicController {
       .catch(showDashboardError);
   }
 
+  function formatDate(value) {
+    if (!value) return '';
+    var date = new Date(value);
+    if (Number.isNaN(date.getTime())) return text(value);
+    return date.toLocaleString('cs-CZ');
+  }
+
+  function renderOrders(data) {
+    var body = document.getElementById('orders-table-body');
+    var count = document.getElementById('orders-count');
+    var metrics = document.getElementById('orders-metrics');
+    if (count) count.textContent = formatNumber(data.total || 0) + ' Heureka orders';
+    if (metrics) {
+      var counts = data.statusCounts || {};
+      metrics.innerHTML = [
+        ['Pending', counts.pending || 0, 'Awaiting processing'],
+        ['Forwarded', counts.forwarded || 0, 'Sent to Orders'],
+        ['Failed', counts.failed || 0, 'Needs review'],
+        ['Cancelled', counts.cancelled || 0, 'Closed externally']
+      ].map(function (item) {
+        return '<article class="dash-metric"><span>' + escapeHtml(item[0]) + '</span><strong>' + escapeHtml(formatNumber(item[1])) + '</strong><p>' + escapeHtml(item[2]) + '</p></article>';
+      }).join('');
+    }
+    if (!body) return;
+    body.innerHTML = (data.orders || []).map(function (order) {
+      return '<tr><td>' + escapeHtml(order.externalOrderId || '') + '</td><td>' + escapeHtml(order.orderId || '') + '</td><td>' + escapeHtml(order.customerEmail || order.customerPhone || '') + '</td><td>' + escapeHtml(formatNumber(order.total || 0)) + ' ' + escapeHtml(order.currency || 'CZK') + '</td><td>' + statusChip(order.status) + '</td><td>' + (order.forwarded ? statusChip('forwarded') : statusChip('local')) + '</td><td>' + escapeHtml(formatDate(order.createdAt)) + '</td></tr>';
+    }).join('') || '<tr><td colspan="7">No Heureka orders found</td></tr>';
+  }
+
+  function renderOperations(data) {
+    var metrics = document.getElementById('operations-metrics');
+    var body = document.getElementById('feed-history-body');
+    var runtime = document.getElementById('runtime-status');
+    var summary = data.summary || {};
+    if (metrics) {
+      metrics.innerHTML = [
+        ['Feed status', (data.feedStatus && data.feedStatus.status) || 'unknown', 'Current lifecycle state'],
+        ['Included', summary.includedProducts || 0, 'Products in feed'],
+        ['Needs data', summary.needsData || 0, 'Catalog blockers'],
+        ['Orders', summary.orderCount || 0, 'Tracked locally']
+      ].map(function (item) {
+        return '<article class="dash-metric"><span>' + escapeHtml(item[0]) + '</span><strong>' + escapeHtml(item[1]) + '</strong><p>' + escapeHtml(item[2]) + '</p></article>';
+      }).join('');
+    }
+    if (body) {
+      body.innerHTML = (data.feedHistory || []).map(function (feed) {
+        return '<tr><td>' + escapeHtml(feed.feedType || '') + '</td><td>' + statusChip(feed.status) + '</td><td>' + escapeHtml(formatNumber(feed.productCount || 0)) + '</td><td>' + escapeHtml(formatDate(feed.generatedAt || feed.createdAt)) + '</td><td>' + escapeHtml(feed.feedUrl || '') + '</td></tr>';
+      }).join('') || '<tr><td colspan="5">No feed generation history</td></tr>';
+    }
+    if (runtime) {
+      var rt = data.runtime || {};
+      runtime.innerHTML = '<strong>Runtime</strong><p>Feed: ' + escapeHtml(rt.feedUrl || '') + '</p><p>Auth: ' + escapeHtml(rt.authServiceUrl || '') + '</p><p>Catalog: ' + escapeHtml(rt.catalogServiceUrl || '') + '</p><p>Logging: ' + escapeHtml(rt.loggingConfigured ? 'configured' : 'missing') + '</p>';
+    }
+  }
+
+  function renderSettings(data) {
+    var metrics = document.getElementById('settings-metrics');
+    var body = document.getElementById('settings-body');
+    var settings = data.settings || {};
+    var runtime = data.runtime || {};
+    if (metrics) {
+      metrics.innerHTML = [
+        ['Feed type', data.feedType || 'heureka_cz', 'Default marketplace feed'],
+        ['Settings', data.settings ? 'available' : 'missing', 'Feed configuration'],
+        ['Currency', settings.currency || 'CZK', 'Feed currency'],
+        ['Logging', runtime.loggingConfigured ? 'configured' : 'missing', 'Logging service URL']
+      ].map(function (item) {
+        return '<article class="dash-metric"><span>' + escapeHtml(item[0]) + '</span><strong>' + escapeHtml(item[1]) + '</strong><p>' + escapeHtml(item[2]) + '</p></article>';
+      }).join('');
+    }
+    if (body) {
+      body.innerHTML = data.settings
+        ? '<strong>' + escapeHtml(settings.shopName || 'Heureka shop') + '</strong><p>' + escapeHtml(settings.shopUrl || '') + '</p><p>Contact: ' + escapeHtml(settings.contactEmail || '') + '</p><p>Delivery: ' + escapeHtml(settings.deliveryDays || 0) + ' days, ' + escapeHtml(formatNumber(settings.deliveryPrice || 0)) + ' ' + escapeHtml(settings.currency || 'CZK') + '</p><p>Health: ' + escapeHtml(runtime.healthUrl || '') + '</p>'
+        : '<strong>Settings missing</strong><p>' + escapeHtml((data.missing || []).join(', ')) + '</p><p>Feed generation remains gated until settings exist and are active.</p>';
+    }
+  }
+
+  function loadOrdersData() {
+    var filter = document.getElementById('orders-status-filter');
+    var status = filter && filter.value ? filter.value : 'all';
+    return Promise.all([
+      api('/heureka/dashboard/summary'),
+      api('/heureka/dashboard/orders?limit=50&status=' + encodeURIComponent(status))
+    ]).then(function (results) {
+      renderMetrics(results[0].data);
+      renderOrders(results[1].data);
+    }).catch(showDashboardError);
+  }
+
+  function loadOperationsData() {
+    return api('/heureka/dashboard/operations')
+      .then(function (payload) {
+        renderMetrics(payload.data.summary || {});
+        renderOperations(payload.data);
+      })
+      .catch(showDashboardError);
+  }
+
+  function loadSettingsData() {
+    return api('/heureka/dashboard/settings')
+      .then(function (payload) { renderSettings(payload.data); })
+      .catch(showDashboardError);
+  }
+
+  function loadCurrentRoute() {
+    var route = setActiveDashboardRoute();
+    if (route === 'orders') return loadOrdersData();
+    if (route === 'operations') return loadOperationsData();
+    if (route === 'settings') return loadSettingsData();
+    if (route === 'admin') return loadAdminData();
+    return loadDashboardData();
+  }
+
   function loadAdminData() {
     return Promise.all([
       api('/heureka/dashboard/admin/stats'),
-      api('/heureka/dashboard/admin/registered-users?limit=50')
+      api('/heureka/dashboard/admin/registered-users?limit=100&adminOnly=yes')
     ]).then(function (results) {
       var stats = results[0].data;
       var users = results[1].data;
@@ -723,9 +902,11 @@ export class PublicController {
       });
     }
     var refresh = document.getElementById('dashboard-refresh');
-    if (refresh) refresh.addEventListener('click', loadDashboardData);
+    if (refresh) refresh.addEventListener('click', loadCurrentRoute);
     var search = document.getElementById('products-search-button');
     if (search) search.addEventListener('click', loadDashboardData);
+    var ordersStatus = document.getElementById('orders-status-filter');
+    if (ordersStatus) ordersStatus.addEventListener('change', loadOrdersData);
     var regenerate = document.getElementById('regenerate-feed');
     if (regenerate) {
       regenerate.addEventListener('click', function () {
@@ -740,6 +921,20 @@ export class PublicController {
           });
       });
     }
+    var operationsRegenerate = document.getElementById('operations-regenerate-feed');
+    if (operationsRegenerate) {
+      operationsRegenerate.addEventListener('click', function () {
+        operationsRegenerate.disabled = true;
+        operationsRegenerate.textContent = 'Regenerating';
+        api('/heureka/dashboard/feed/regenerate', { method: 'POST', body: { feedType: 'heureka_cz' } })
+          .then(loadOperationsData)
+          .catch(showDashboardError)
+          .finally(function () {
+            operationsRegenerate.disabled = false;
+            operationsRegenerate.textContent = 'Regenerate feed';
+          });
+      });
+    }
     api('/heureka/dashboard/me').then(function (payload) {
       var user = payload.data || {};
       var userEl = document.getElementById('dashboard-user');
@@ -749,11 +944,11 @@ export class PublicController {
       var adminUsersLink = document.getElementById('admin-users-link');
       if (adminUsersLink) adminUsersLink.hidden = !user.isAdmin;
       var route = setActiveDashboardRoute();
-      loadDashboardData();
-      if (route === 'admin') {
-        if (user.isAdmin) loadAdminData();
-        else showDashboardError(new Error('Admin access required'));
+      if (route === 'admin' && !user.isAdmin) {
+        showDashboardError(new Error('Admin access required'));
+        return;
       }
+      loadCurrentRoute();
     }).catch(function () {
       window.localStorage.removeItem('accessToken');
       window.location.replace('/login?return_to=/dashboard');
@@ -1137,7 +1332,7 @@ td b.danger { background: #ffe8ea; color: var(--red); }
 .nav-icon svg, .metric-icon svg, .icon-button svg, .products-toolbar-actions svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .dashboard-sidebar-foot { margin-top: auto; display: grid; gap: 10px; padding: 0 12px; color: #64748b; font-size: 12px; }
 .dashboard-sidebar-foot span { display: flex; align-items: center; gap: 6px; }
-.sidebar-collapse { text-align: left; color: #334155; font-size: 12px; }
+.sidebar-collapse { min-height: 28px; text-align: left; color: #334155; font-size: 12px; border: 0; background: transparent; padding: 0; cursor: pointer; }
 .dashboard-shell { min-width: 0; display: grid; grid-template-rows: 64px minmax(0, 1fr); }
 .dashboard-topbar {
   display: flex;
@@ -1204,7 +1399,7 @@ td b.danger { background: #ffe8ea; color: var(--red); }
 .dash-metric p { margin: 5px 0 0; color: #64748b; font-size: 12px; }
 .dashboard-products {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 430px;
+  grid-template-columns: minmax(0, 1fr) minmax(380px, 430px);
   gap: 0;
 }
 .products-table-panel, .listing-panel, .admin-panel {
@@ -1217,12 +1412,13 @@ td b.danger { background: #ffe8ea; color: var(--red); }
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   padding: 14px 18px;
+  flex-wrap: wrap;
 }
 .products-toolbar h2 { font-size: 18px; margin-bottom: 4px; }
 .products-toolbar p { margin: 0; color: #64748b; }
-.products-toolbar-actions { display: flex; gap: 10px; align-items: center; }
+.products-toolbar-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
 .products-toolbar-actions .secondary-button svg { width: 16px; height: 16px; margin-right: 7px; vertical-align: -3px; }
 .products-filter {
   display: grid;
@@ -1264,6 +1460,13 @@ td b.danger { background: #ffe8ea; color: var(--red); }
 .listing-gaps { display: flex; flex-wrap: wrap; gap: 8px; }
 .dashboard-notice { border: 1px solid #f59f00; background: #fffbeb; color: #92400e; border-radius: 8px; padding: 12px; }
 .admin-panel { padding-bottom: 16px; }
+.dashboard-products[hidden], .admin-panel[hidden] { display: none !important; }
+@media (max-width: 1380px) {
+  .dashboard-products { grid-template-columns: minmax(0, 1fr) 380px; }
+  .products-toolbar-actions .primary-button { display: none; }
+  .products-filter { grid-template-columns: minmax(220px, 1fr) minmax(150px, .7fr) minmax(150px, .7fr); }
+  .products-filter select:nth-of-type(3) { display: none; }
+}
 @media (max-width: 1100px) {
   .header-inner { grid-template-columns: 1fr; justify-items: start; padding: 16px 24px; }
   .nav { justify-content: flex-start; flex-wrap: wrap; gap: 22px; }
@@ -1304,6 +1507,9 @@ td b.danger { background: #ffe8ea; color: var(--red); }
   .auth-actions .primary-button, .auth-actions .secondary-button { width: 100%; }
   .footer-inner { grid-template-columns: 1fr; padding: 32px 20px 24px; }
   .footer-bottom { flex-direction: column; padding-left: 20px; padding-right: 20px; }
+  .dashboard-shell { grid-template-rows: auto minmax(0, 1fr); }
+  .dashboard-topbar { align-items: flex-start; flex-direction: column; padding: 14px 20px; }
+  .topbar-status { width: 100%; flex-wrap: wrap; gap: 10px; }
   .dashboard-workspace { padding: 14px; }
   .dashboard-metrics { grid-template-columns: 1fr; }
   .products-toolbar, .dashboard-topline, .products-filter { flex-direction: column; align-items: stretch; }

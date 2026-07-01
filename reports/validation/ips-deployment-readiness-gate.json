@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-07-01T13:47:59Z",
+  "created_at": "2026-07-01T16:32:48Z",
   "gate": "deployment_readiness",
   "next_step": "ready_for_deployment_review",
   "pre_coding_gate": {
@@ -185,6 +185,76 @@
       "line": 135,
       "marker": "[MISSING: app-local user profile table]",
       "path": "docs/orchestrator/TASK-009-user-dashboard-admin-plan.md"
+    },
+    {
+      "line": 44,
+      "marker": "[MISSING: operation/audit log contract]",
+      "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
+    },
+    {
+      "line": 53,
+      "marker": "[UNKNOWN: shop approval and legal/company fields]",
+      "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
+    },
+    {
+      "line": 73,
+      "marker": "[MISSING: operation/audit log contract]",
+      "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
+    },
+    {
+      "line": 90,
+      "marker": "[UNKNOWN: dedicated production secret source for HEUREKA_INTERNAL_SERVICE_TOKEN]",
+      "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
+    },
+    {
+      "line": 91,
+      "marker": "[UNKNOWN: whether external Heureka shop approval must complete before feed validity details update]",
+      "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
+    },
+    {
+      "line": 92,
+      "marker": "[MISSING: Heureka category mapping for current Catalog products]",
+      "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
+    },
+    {
+      "line": 93,
+      "marker": "[MISSING: owner-supplied e-shop registration legal/company fields for external Heureka completion]",
+      "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
+    },
+    {
+      "line": 94,
+      "marker": "[MISSING: operation/audit log contract]",
+      "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
+    },
+    {
+      "line": 96,
+      "marker": "[UNKNOWN: owner of k8s/external-secret.yaml runtime change]",
+      "path": "docs/orchestrator/TASK-010-channel-parity-checklist.md"
+    },
+    {
+      "line": 66,
+      "marker": "[MISSING: ...]",
+      "path": "docs/orchestrator/TASK-010-channel-parity-gap-plan.md"
+    },
+    {
+      "line": 66,
+      "marker": "[UNKNOWN: ...]",
+      "path": "docs/orchestrator/TASK-010-channel-parity-gap-plan.md"
+    },
+    {
+      "line": 106,
+      "marker": "[UNKNOWN: production Heureka host and exact public URL until ingress/live route inspection is completed]",
+      "path": "docs/orchestrator/TASK-010-channel-parity-gap-plan.md"
+    },
+    {
+      "line": 107,
+      "marker": "[UNKNOWN: whether existing TASK-009 dirty changes are owner-approved final work or in-progress draft; treat as protected until inspected]",
+      "path": "docs/orchestrator/TASK-010-channel-parity-gap-plan.md"
+    },
+    {
+      "line": 108,
+      "marker": "[UNKNOWN: whether Heureka should expose a service-local React frontend or keep the current server-rendered public controller pattern; decide from reference parity and current repo structure]",
+      "path": "docs/orchestrator/TASK-010-channel-parity-gap-plan.md"
     },
     {
       "line": 52,
