@@ -116,7 +116,7 @@ export class GatewayController {
   @UseGuards(JwtAuthGuard)
   async importRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
     const path = req.url.replace('/api/import', '');
-    return this.routeRequest('import', `/import${path}`, req, res);
+    return this.routeOptionalServiceRequest('import', 'IMPORT_SERVICE_URL or IMPORT_SERVICE_PORT', `/import${path}`, req, res);
   }
 
   /**
@@ -128,14 +128,14 @@ export class GatewayController {
   @UseGuards(JwtAuthGuard)
   async settingsRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
     const path = req.url.replace('/api/settings', '');
-    return this.routeRequest('settings', `/settings${path}`, req, res);
+    return this.routeOptionalServiceRequest('settings', 'SETTINGS_SERVICE_URL or HEUREKA_SETTINGS_SERVICE_PORT', `/settings${path}`, req, res);
   }
 
   @All('settings')
   @UseGuards(JwtAuthGuard)
   async settingsBaseRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
     const path = req.url.replace('/api/settings', '') || '';
-    return this.routeRequest('settings', `/settings${path}`, req, res);
+    return this.routeOptionalServiceRequest('settings', 'SETTINGS_SERVICE_URL or HEUREKA_SETTINGS_SERVICE_PORT', `/settings${path}`, req, res);
   }
 
   /**
@@ -231,11 +231,47 @@ export class GatewayController {
       success: false,
       error: {
         code: 'NOT_FOUND',
-        message: `Cannot ${req.method} ${req.url}. Available endpoints: /api/auth/*, /api/heureka/*, /api/import/*, /api/settings/*`,
+        message: `Cannot ${req.method} ${req.url}. ${this.getAvailableEndpointMessage()}`,
       },
       path: req.url,
       originalUrl: req.originalUrl,
       requestPath: req.path,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  private routeOptionalServiceRequest(
+    serviceName: string,
+    missingConfig: string,
+    path: string,
+    req: ExpressRequest,
+    res: ExpressResponse,
+  ) {
+    if (this.gatewayService.isServiceConfigured(serviceName)) {
+      return this.routeRequest(serviceName, path, req, res);
+    }
+
+    this.sharedLogger.warn(`[Gateway Optional Route] ${serviceName} service is not configured`, {
+      serviceName,
+      path,
+      method: req.method,
+      originalUrl: req.originalUrl,
+      missingConfig,
+      readOnly: true,
+      mutations: [],
+    });
+    return res.status(501).json({
+      success: false,
+      readOnly: true,
+      mutations: [],
+      error: {
+        code: 'SERVICE_NOT_CONFIGURED',
+        message: `${serviceName} service is not configured for this Heureka gateway.`,
+        statusCode: 501,
+        serviceName,
+        missing: `[MISSING: ${missingConfig}]`,
+      },
+      path,
       timestamp: new Date().toISOString(),
     });
   }
@@ -418,6 +454,20 @@ export class GatewayController {
       return response.data;
     }
     return response;
+  }
+
+  private getAvailableEndpointMessage(): string {
+    const endpoints = ['/api/auth/*', '/api/heureka/*'];
+    if (this.gatewayService.isServiceConfigured('import')) endpoints.push('/api/import/*');
+    if (this.gatewayService.isServiceConfigured('settings')) endpoints.push('/api/settings/*');
+    const optional = [
+      this.gatewayService.isServiceConfigured('import') ? null : '/api/import/* requires IMPORT_SERVICE_URL or IMPORT_SERVICE_PORT',
+      this.gatewayService.isServiceConfigured('settings') ? null : '/api/settings/* requires SETTINGS_SERVICE_URL or HEUREKA_SETTINGS_SERVICE_PORT',
+    ].filter(Boolean);
+    return [
+      `Available endpoints: ${endpoints.join(', ')}.`,
+      optional.length ? `Optional endpoints: ${optional.join('; ')}.` : '',
+    ].filter(Boolean).join(' ');
   }
 
   /**

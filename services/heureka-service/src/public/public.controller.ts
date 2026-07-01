@@ -46,6 +46,24 @@ export class PublicController {
     return this.dashboard();
   }
 
+  @Get('dashboard/orders')
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  dashboardOrders() {
+    return this.dashboard();
+  }
+
+  @Get('dashboard/operations')
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  dashboardOperations() {
+    return this.dashboard();
+  }
+
+  @Get('dashboard/settings')
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  dashboardSettings() {
+    return this.dashboard();
+  }
+
   @Get('dashboard/admin/users')
   @Header('Content-Type', 'text/html; charset=utf-8')
   dashboardAdminUsers() {

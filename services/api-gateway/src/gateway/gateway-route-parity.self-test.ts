@@ -41,6 +41,7 @@ async function main(): Promise<void> {
   let capturedBody: any = null;
   const controller = new GatewayController(
     {
+      isServiceConfigured: () => false,
       forwardRequest: async () => ({
         _isGatewayResponse: true,
         _gatewayStatus: 409,
@@ -105,6 +106,61 @@ async function main(): Promise<void> {
   if (serializedPayloadSummary.includes('secret') || serializedPayloadSummary.includes('abc123')) {
     throw new Error(`gateway log payload summary leaked sensitive values: ${serializedPayloadSummary}`);
   }
+
+  let optionalForwardCalls = 0;
+  capturedStatus = 0;
+  capturedBody = null;
+  const optionalController = new GatewayController(
+    {
+      isServiceConfigured: () => false,
+      forwardRequest: async () => {
+        optionalForwardCalls += 1;
+        throw new Error('Optional service routes must fail closed before proxying.');
+      },
+    } as any,
+    {
+      setContext: () => undefined,
+      info: () => undefined,
+      warn: () => undefined,
+      error: () => undefined,
+    } as any,
+    {
+      getDependencyHealthStatus: async () => ({
+        contractVersion: 'heureka.dependency-health.v1',
+        status: 'ok',
+        service: 'api-gateway',
+        readOnly: true,
+        mutations: [],
+        dependencies: {},
+      }),
+    } as any,
+  );
+  await (optionalController as any).routeOptionalServiceRequest(
+    'settings',
+    'SETTINGS_SERVICE_URL or HEUREKA_SETTINGS_SERVICE_PORT',
+    '/settings',
+    {
+      method: 'GET',
+      originalUrl: '/api/settings',
+      url: '/api/settings',
+    },
+    {
+      status: (status: number) => {
+        capturedStatus = status;
+        return {
+          json: (body: any) => {
+            capturedBody = body;
+            return undefined;
+          },
+        };
+      },
+    },
+  );
+  assertEqual(optionalForwardCalls, 0, 'optional route proxy calls');
+  assertEqual(capturedStatus, 501, 'optional route status');
+  assertEqual(capturedBody?.readOnly, true, 'optional route readOnly');
+  assertEqual(capturedBody?.error?.code, 'SERVICE_NOT_CONFIGURED', 'optional route code');
+  assertEqual(capturedBody?.error?.serviceName, 'settings', 'optional route serviceName');
 
   console.log('PASS gateway-route-parity self-test');
 }

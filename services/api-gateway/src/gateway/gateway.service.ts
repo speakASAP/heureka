@@ -405,6 +405,10 @@ export class GatewayService implements OnModuleInit {
     return isHeurekaServiceBackendPath(fullPath);
   }
 
+  isServiceConfigured(serviceName: string): boolean {
+    return Boolean(this.serviceUrls[String(serviceName || '').trim()]);
+  }
+
   /**
    * Warm up a single service connection by making a health check request
    * If baseUrl is gateway-proxy, use the correct Nginx route path

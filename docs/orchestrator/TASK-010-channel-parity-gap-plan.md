@@ -3,7 +3,7 @@
 Date: 2026-07-01
 Repository: `/home/ssf/Documents/Github/heureka-service`
 Orchestrator: current Codex thread
-Status: active; code parity implemented through `task-010-readonly-preview-redaction-20260701`, remaining completion is owner/data-gated
+Status: active; code parity implemented through `task-010-route-cleanup-20260701`, remaining completion is owner/data-gated
 
 ## Vision
 
@@ -43,9 +43,9 @@ Feature family: cross-channel parity for frontend, landing, dashboard, catalog c
 - Preserve existing dirty worktree changes unless they are clearly part of this task and reviewed.
 - Current validated state after implementation:
   - Branch: `main`.
-  - Remote status after final deployment and commit: clean worktree; `main...origin/main [ahead 7]`.
-  - Latest deployed images: `localhost:5000/heureka-service:task-010-readonly-preview-redaction-20260701` and `localhost:5000/heureka-api-gateway:task-010-readonly-preview-redaction-20260701`.
-  - Live route evidence: `/health`, `/api/health`, `/health/dependencies`, and `/api/health/dependencies` return `200`; `/heureka/feed/preview?type=heureka_cz` returns XML with `x-heureka-feed-read-only: true`; `/api/heureka/orders` returns expected unauthenticated `401`.
+  - Remote status after final deployment and commit: clean worktree; `main...origin/main [ahead 8]`.
+  - Latest deployed images: `localhost:5000/heureka-service:task-010-route-cleanup-20260701` and `localhost:5000/heureka-api-gateway:task-010-route-cleanup-20260701`.
+  - Live route evidence: `/dashboard/orders`, `/dashboard/operations`, `/dashboard/settings`, `/health`, `/api/health`, and `/health/dependencies` return `200`; `/heureka/feed/preview?type=heureka_cz` returns XML with `x-heureka-feed-read-only: true`; `/api/heureka/orders`, `/api/settings`, and `/api/import/test` return expected unauthenticated `401`.
 
 ### Phase 1: Parallel Discovery
 
@@ -76,9 +76,9 @@ Only after the checklist is written, split code work into disjoint write scopes:
 
 | Lane | Status | Owner Role | Objective | Allowed Files | Forbidden Files | Dependency | Integration Owner |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| D | implemented | Worker: frontend/public surface | Bring landing/Auth/static dashboard shell to reference parity. | `services/heureka-service/src/public/**`, frontend/static assets if present, nginx/k8s only if route wiring requires it. | Catalog/orders/shared clients. | Phase 2 checklist. | Public landing/Auth/dashboard shells deployed and smoke-tested. |
+| D | implemented | Worker: frontend/public surface | Bring landing/Auth/static dashboard shell to reference parity. | `services/heureka-service/src/public/**`, frontend/static assets if present, nginx/k8s only if route wiring requires it. | Catalog/orders/shared clients. | Phase 2 checklist. | Public landing/Auth/dashboard shells are explicit routes, deployed, and smoke-tested. |
 | E | implemented with owner/data-gated product readiness residuals | Worker: product/feed catalog parity | Bring Catalog product/feed controls to reference channel lifecycle shape. | `services/heureka-service/src/heureka/feed/**`, `shared/clients/catalog-client.service.ts` if needed. | Public landing/dashboard files. | Phase 2 checklist. | Catalog content/profile, Warehouse batch readiness, and read-only external feed preview implemented; current blockers are stock/image owner data. |
-| F | implemented with platform-level audit package residual | Worker: orders/logging/health parity | Bring Orders, logging, health, and telemetry to reference channel lifecycle shape. | `services/heureka-service/src/heureka/orders/**`, `shared/logger/**`, `shared/clients/order-client.service.ts`, service health wiring. | Public/feed files unless needed for route registration. | Phase 2 checklist. | Orders contract, local operation events, gateway orders routing, dependency health, and redacted gateway error logging deployed; shared ecosystem audit package remains separate platform work. |
+| F | implemented with platform-level audit package residual | Worker: orders/logging/health parity | Bring Orders, logging, health, and telemetry to reference channel lifecycle shape. | `services/heureka-service/src/heureka/orders/**`, `shared/logger/**`, `shared/clients/order-client.service.ts`, service health wiring. | Public/feed files unless needed for route registration. | Phase 2 checklist. | Orders contract, local operation events, gateway orders routing, optional gateway route fail-closed handling, dependency health, and redacted gateway error logging deployed; shared ecosystem audit package remains separate platform work. |
 
 Conflict rule: if two lanes need the same file, that file becomes orchestrator-owned and workers must hand off recommendations instead of editing it.
 
@@ -100,7 +100,7 @@ Implemented in the remote repo and tracked in `docs/orchestrator/TASK-010-channe
 
 ## Validation
 
-Validated with targeted self-tests, TypeScript builds, IPS gates, live deployment smoke, dependency-health smoke, gateway route/redaction smoke, read-only feed preview smoke, blocked-product lane verifier, and external-readiness verifier. Use `npm run verify:task-010-source-parity` for the consolidated non-mutating source parity bundle.
+Validated with targeted self-tests, TypeScript builds, IPS gates, live deployment smoke, dependency-health smoke, public dashboard route smoke, gateway route/redaction/optional-route smoke, read-only feed preview smoke, blocked-product lane verifier, and external-readiness verifier. Use `npm run verify:task-010-source-parity` for the consolidated non-mutating source parity bundle.
 
 ## Open Questions
 
