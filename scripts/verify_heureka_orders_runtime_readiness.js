@@ -47,6 +47,8 @@ function verifySourceContracts() {
   assert.match(deployment, /name: HEUREKA_INTERNAL_SERVICE_TOKEN/);
   assert.match(deployment, /key: CATALOG_INTERNAL_SERVICE_TOKEN/);
   assert.match(deployment, /name: WAREHOUSE_SERVICE_TOKEN/);
+  assert.match(deployment, /name: warehouse-microservice-secret/);
+  assert.match(deployment, /key: CLIPLOT_WAREHOUSE_SERVICE_TOKEN/);
   assert.match(configmap, /ORDER_SERVICE_URL: "http:\/\/orders-microservice:3203"/);
   assert.match(configmap, /WAREHOUSE_SERVICE_URL: "http:\/\/warehouse-microservice:3201"/);
 
@@ -78,7 +80,7 @@ const report = {
       ORDER_SERVICE_URL: 'heureka-config',
       HEUREKA_INTERNAL_SERVICE_TOKEN: 'catalog-microservice-secret/CATALOG_INTERNAL_SERVICE_TOKEN',
       JWT_TOKEN: 'heureka-service-secret/JWT_TOKEN',
-      WAREHOUSE_SERVICE_TOKEN: 'heureka-service-secret/WAREHOUSE_SERVICE_TOKEN',
+      WAREHOUSE_SERVICE_TOKEN: 'warehouse-microservice-secret/CLIPLOT_WAREHOUSE_SERVICE_TOKEN',
     },
     sourceContractsVerified: !runtimeMode,
     runtimeModeNote: runtimeMode ? 'source assertions skipped; run without --runtime in the repository to verify source files' : null,

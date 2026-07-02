@@ -54,8 +54,8 @@ spec:
             - name: WAREHOUSE_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: heureka-service-secret
-                  key: WAREHOUSE_SERVICE_TOKEN
+                  name: warehouse-microservice-secret
+                  key: CLIPLOT_WAREHOUSE_SERVICE_TOKEN
           startupProbe:
             httpGet:
               path: /health
