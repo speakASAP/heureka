@@ -111,11 +111,12 @@ export class FeedService {
 
     const products = await Promise.all(productIds.map(async (productId) => {
       try {
-        const [product, pricing, media, feedSnapshot] = await Promise.all([
-          this.catalogClient.getProductById(productId),
+        const product = await this.catalogClient.getProductById(productId);
+        const [pricing, media, feedSnapshot, catalogQuality] = await Promise.all([
           this.catalogClient.getProductPricing(productId),
           this.catalogClient.getProductMedia(productId),
           this.catalogClient.getHeurekaFeedSnapshot(productId, feedType),
+          this.getCatalogProductQualityReview(productId, product),
         ]);
         const mediaItems = Array.isArray(media) ? media : [];
         const feedFields = this.buildHeurekaFeedFields(product, pricing, mediaItems, settings, feedSnapshot);
@@ -125,6 +126,7 @@ export class FeedService {
           price: this.optionalNumber(feedFields.PRICE_VAT) ?? 0,
           images: mediaItems.filter((m: any) => m.type === 'image'),
           feedFields,
+          catalogQuality,
         };
       } catch (error: any) {
         this.logger.warn(`Failed to fetch product ${productId}: ${error.message}`);
@@ -133,7 +135,11 @@ export class FeedService {
     }));
 
     const fetchedProducts = products.filter((p) => p !== null) as any[];
-    const validProducts = fetchedProducts.filter((p) => Number(p.stock) > 0 && this.hasRequiredPublicFeedFields(p.feedFields || {}));
+    const validProducts = fetchedProducts.filter((p) => (
+      Number(p.stock) > 0 &&
+      this.hasRequiredPublicFeedFields(p.feedFields || {}) &&
+      !this.hasCatalogQualityBlockers(p.catalogQuality)
+    ));
     const zeroStockExcludedCount = fetchedProducts.length - validProducts.length;
     const failedFetchCount = products.length - fetchedProducts.length;
     const xml = this.buildHeurekaXml(validProducts, settings);
@@ -395,10 +401,11 @@ ${items}
     const resolvedSettings = settings === undefined ? await this.findReadinessSettings(feedType) : settings;
     try {
       const product = await this.catalogClient.getProductById(productId);
-      const [pricing, media, feedSnapshot] = await Promise.all([
+      const [pricing, media, feedSnapshot, catalogQuality] = await Promise.all([
         this.catalogClient.getProductPricing(productId),
         this.catalogClient.getProductMedia(productId),
         this.catalogClient.getHeurekaFeedSnapshot(productId, feedType),
+        this.getCatalogProductQualityReview(productId, product),
       ]);
       const mediaItems = Array.isArray(media) ? media : [];
       const feedFields = this.buildHeurekaFeedFields(product, pricing, mediaItems, resolvedSettings, feedSnapshot);
@@ -422,6 +429,7 @@ ${items}
         settingsActive: Boolean(resolvedSettings?.isActive),
         renderableXml: this.canRenderFeedFields(feedFields),
         candidateFeedFields,
+        catalogQuality,
       };
     } catch (error: any) {
       this.logger.warn(`Readiness product snapshot unavailable for ${productId}: ${error.message}`);
@@ -431,6 +439,50 @@ ${items}
         settingsActive: Boolean(resolvedSettings?.isActive),
       };
     }
+  }
+
+  private async getCatalogProductQualityReview(productId: string, product: any): Promise<any> {
+    const catalogClient = this.catalogClient as CatalogClientService & {
+      getProductQualityReviewForProduct?: (productId: string, product?: any, context?: any) => Promise<any>;
+    };
+    if (typeof catalogClient.getProductQualityReviewForProduct !== 'function') {
+      return this.catalogProductQualityUnavailable(productId, '[MISSING: Heureka Catalog product quality client method]');
+    }
+    try {
+      const lookup = await catalogClient.getProductQualityReviewForProduct(productId, product);
+      if (!lookup || lookup.unavailable || !lookup.item) {
+        return this.catalogProductQualityUnavailable(productId, lookup?.missing?.[0] || lookup?.blockers?.[0]);
+      }
+      return {
+        policyId: lookup.policyId || 'catalog.product_quality.v1',
+        unavailable: false,
+        canActivate: typeof lookup.item.canActivate === 'boolean' ? lookup.item.canActivate : null,
+        blockingIssues: Array.isArray(lookup.item.blockingIssues) ? lookup.item.blockingIssues : [],
+        blockingMissingFields: Array.isArray(lookup.item.blockingMissingFields) ? lookup.item.blockingMissingFields : [],
+        nextAction: lookup.item.nextAction || null,
+        missing: [],
+      };
+    } catch (error: any) {
+      this.logger.warn(`Catalog product quality review unavailable for ${productId}: ${error.message}`);
+      return this.catalogProductQualityUnavailable(productId, '[MISSING: Catalog product quality review contract response]');
+    }
+  }
+
+  private catalogProductQualityUnavailable(productId: string, reason?: string) {
+    return {
+      policyId: 'catalog.product_quality.v1',
+      unavailable: true,
+      canActivate: null,
+      blockingIssues: [{ code: 'catalog_quality_unavailable', field: 'catalog_quality', severity: 'blocking', message: reason || `Catalog product quality review item unavailable for ${productId}` }],
+      blockingMissingFields: ['catalog_quality'],
+      nextAction: 'resolve_catalog_quality_review_access',
+      missing: [reason || `[MISSING: Catalog product quality review item for ${productId}]`],
+    };
+  }
+
+  private hasCatalogQualityBlockers(catalogQuality: any): boolean {
+    if (!catalogQuality || catalogQuality.unavailable) return true;
+    return Array.isArray(catalogQuality.blockingIssues) && catalogQuality.blockingIssues.length > 0;
   }
 
   private async buildStockAvailabilityLookup(productIds: string[]): Promise<StockAvailabilityLookup> {
@@ -458,6 +510,8 @@ ${items}
 
   private isProductActive(product: any): boolean {
     if (!product) return false;
+    const lifecycle = this.optionalString(product.lifecycle || product.lifecycleStatus || product.status);
+    if (lifecycle && ['archived', 'deleted', 'inactive'].includes(lifecycle.toLowerCase())) return false;
     if (typeof product.isActive === 'boolean') return product.isActive;
     if (typeof product.status === 'string') return product.status.toLowerCase() !== 'inactive';
     return true;

@@ -29,7 +29,7 @@ async function main(): Promise<void> {
       }),
     },
     heurekaProduct: {
-      findMany: async () => ([{ productId: 'synthetic-product-1' }]),
+      findMany: async () => ([{ productId: 'synthetic-product-1' }, { productId: 'synthetic-product-2' }]),
     },
     heurekaFeed: {
       create: async () => {
@@ -44,17 +44,32 @@ async function main(): Promise<void> {
   };
 
   const catalogClient = {
-    getProductById: async () => ({
-      id: 'synthetic-product-1',
-      title: 'Synthetic Trail Shoe',
+    getProductById: async (productId: string) => ({
+      id: productId,
+      sku: productId === 'synthetic-product-2' ? 'DUPLICATE-SKU' : 'SYNTHETIC-1',
+      title: productId === 'synthetic-product-2' ? 'Blocked Catalog Product' : 'Synthetic Trail Shoe',
       description: 'Synthetic public description.',
       status: 'active',
       categoryText: 'Sport | Running shoes',
       brand: 'Synthetic',
     }),
     getProductPricing: async () => ({ priceVat: '1299.00' }),
-    getProductMedia: async () => ([{ type: 'image', url: 'https://example.test/images/synthetic-trail-shoe.jpg', isPrimary: true }]),
+    getProductMedia: async (productId: string) => ([{ type: 'image', url: `https://example.test/images/${productId}.jpg`, isPrimary: true }]),
     getHeurekaFeedSnapshot: async () => ({ feedFields: {} }),
+    getProductQualityReviewForProduct: async (productId: string) => ({
+      policyId: 'catalog.product_quality.v1',
+      unavailable: false,
+      item: {
+        productId,
+        canActivate: productId !== 'synthetic-product-2',
+        blockingIssues: productId === 'synthetic-product-2'
+          ? [{ code: 'duplicate_sku', field: 'sku', severity: 'blocking', message: 'SKU is duplicated.' }]
+          : [],
+        blockingMissingFields: productId === 'synthetic-product-2' ? ['sku'] : [],
+        nextAction: productId === 'synthetic-product-2' ? 'resolve_blockers:sku' : 'ready_for_activation',
+      },
+      missing: [],
+    }),
   };
 
   const warehouseClient = {
@@ -82,9 +97,11 @@ async function main(): Promise<void> {
 
   assertEqual(preview.validation.status, 'valid', 'preview status');
   assertEqual(preview.validation.feedId, 'read-only-preview', 'preview feed id');
-  assertEqual(preview.sourceProductCount, 1, 'preview source count');
+  assertEqual(preview.sourceProductCount, 2, 'preview source count');
   assertEqual(preview.publicProductCount, 1, 'preview public count');
   assertIncludes(preview.xml, '<SHOPITEM>', 'preview XML');
+  assertIncludes(preview.xml, 'synthetic-product-1', 'preview XML includes quality-clean product');
+  assertEqual(preview.xml.includes('synthetic-product-2'), false, 'preview XML excludes Catalog quality blocked product');
   assertEqual(feedCreateCalls, 0, 'preview feed create calls');
   assertEqual(feedUpdateCalls, 0, 'preview feed update calls');
   assertEqual(operationEventCalls, 0, 'preview operation event calls');

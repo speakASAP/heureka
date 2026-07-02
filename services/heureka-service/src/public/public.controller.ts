@@ -694,6 +694,16 @@ export class PublicController {
       : '<span class="feed-pill quality-good">Ready</span>';
   }
 
+  function countReadinessBlockers(items) {
+    return (items || []).reduce(function (counts, item) {
+      (item.blockers || []).forEach(function (blocker) {
+        var code = text(blocker.code || blocker.field || '');
+        if (code) counts[code] = (counts[code] || 0) + 1;
+      });
+      return counts;
+    }, {});
+  }
+
   function qualityClass(value) {
     if (Number(value) >= 85) return 'quality-good';
     if (Number(value) >= 60) return 'quality-warn';
@@ -876,7 +886,7 @@ export class PublicController {
     api('/heureka/feed/readiness/bulk', { method: 'POST', body: { feedType: 'heureka_cz', productIds: ids } })
       .then(function (payload) {
         var data = payload.data || {};
-        var counts = data.blockerCounts || {};
+        var counts = data.blockerCounts || countReadinessBlockers(data.items || []);
         var blockerText = Object.keys(counts).length
           ? Object.keys(counts).map(function (key) { return key + ': ' + counts[key]; }).join(', ')
           : 'no blockers';

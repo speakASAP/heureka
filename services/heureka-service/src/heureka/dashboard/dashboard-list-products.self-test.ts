@@ -84,6 +84,21 @@ async function main(): Promise<void> {
       catalogSettingsAuthorizations.push(context?.authorization);
       return { sources: [{ token: 'alfares', label: 'Alfares', defaultEnabled: true }] };
     },
+    getProductQualityReviewForProduct: async (productId: string) => ({
+      policyId: 'catalog.product_quality.v1',
+      source: 'review_queue',
+      unavailable: false,
+      item: {
+        productId,
+        canActivate: productId !== 'catalog-product-2',
+        blockingIssues: productId === 'catalog-product-2'
+          ? [{ code: 'duplicate_sku', field: 'sku', severity: 'blocking', message: 'SKU is duplicated in Catalog.' }]
+          : [],
+        blockingMissingFields: productId === 'catalog-product-2' ? ['sku'] : [],
+        nextAction: productId === 'catalog-product-2' ? 'resolve_blockers:sku' : 'ready_for_activation',
+      },
+      missing: [],
+    }),
   };
 
   const warehouseClient = {
@@ -134,6 +149,7 @@ async function main(): Promise<void> {
             blockers: [
               { code: 'ZERO_STOCK', ownerService: 'warehouse-service', severity: 'blocker' },
               { code: 'MISSING_PRIMARY_IMAGE', ownerService: 'catalog-media-service', severity: 'blocker' },
+              { code: 'duplicate_sku', ownerService: 'catalog-service', severity: 'blocker' },
             ],
           },
         ],
@@ -171,6 +187,11 @@ async function main(): Promise<void> {
       stock: 5,
       pricing: { priceVat: '299.00' },
       media: [{ id: 'media-disabled', url: 'https://example.test/disabled.jpg', isPrimary: true }],
+      catalogQuality: {
+        policyId: 'catalog.product_quality.v1',
+        item: { productId: 'catalog-product-3', canActivate: true, blockingIssues: [], blockingMissingFields: [] },
+        unavailable: false,
+      },
       sourceSettings: {},
       catalogScope: 'effective',
     },
@@ -217,6 +238,10 @@ async function main(): Promise<void> {
   assertEqual(response.products[1].nextAction, 'resolve_data_gaps');
   assertEqual(response.products[1].canIncludeInFeed, false);
   assertIncludes(response.products[1].gaps, 'stock');
+  assertIncludes(response.products[1].gaps, 'sku');
+  assertIncludes(response.products[1].blockers.map((blocker: any) => blocker.code), 'duplicate_sku');
+  assertEqual(response.products[1].catalogQuality.policyId, 'catalog.product_quality.v1');
+  assertEqual(response.products[1].catalogQuality.canActivate, false);
   assertEqual(disabledSellerProjection.catalogSource.type, 'community');
   assertEqual(disabledSellerProjection.catalogSource.communityVisible, false);
   assertEqual(disabledSellerProjection.catalogSource.resaleMutationPath, null);
@@ -242,6 +267,11 @@ async function main(): Promise<void> {
       stock: 5,
       pricing: { priceVat: '399.00' },
       media: [{ id: 'media-owned', url: 'https://example.test/owned.jpg', isPrimary: true }],
+      catalogQuality: {
+        policyId: 'catalog.product_quality.v1',
+        item: { productId: 'catalog-product-4', canActivate: true, blockingIssues: [], blockingMissingFields: [] },
+        unavailable: false,
+      },
       sourceSettings: {},
       catalogScope: 'effective',
       actor: { id: 'user-1', email: 'user@example.test', roles: [] },
@@ -287,7 +317,9 @@ async function main(): Promise<void> {
   assertEqual(lanes.lanes.stock.productCount, 1);
   assertEqual(lanes.lanes.media.status, 'blocked');
   assertEqual(lanes.lanes.media.productCount, 1);
-  assertEqual(lanes.lanes.catalogContent.status, 'ready');
+  assertEqual(lanes.lanes.catalogContent.status, 'blocked');
+  assertEqual(lanes.lanes.catalogContent.productCount, 1);
+  assertIncludes(lanes.lanes.catalogContent.blockerCodes, 'duplicate_sku');
   assertEqual(lanes.blockedProducts.length, 1);
   assertEqual(lanes.blockedProducts[0].nextAction, 'stock_owner_decision');
   assertEqual(lanes.readOnly, true);

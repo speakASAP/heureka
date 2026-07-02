@@ -25,6 +25,13 @@ const readySnapshot = {
   settingsActive: true,
   renderableXml: true,
   candidateFeedFields: ['ITEM_ID', 'PRODUCTNAME', 'PRICE_VAT'],
+  catalogQuality: {
+    policyId: 'catalog.product_quality.v1',
+    canActivate: true,
+    blockingIssues: [],
+    blockingMissingFields: [],
+    nextAction: 'ready_for_activation',
+  },
 };
 
 const ready = evaluateCatalogFeedReadiness(readySnapshot);
@@ -48,6 +55,30 @@ assertIncludes(blocked.blockers.map((blocker) => blocker.code), 'INVALID_IMAGE_U
 assertIncludes(blocked.blockers.map((blocker) => blocker.code), 'PRICE_NOT_POSITIVE');
 assertIncludes(blocked.blockers.map((blocker) => blocker.code), 'ZERO_STOCK');
 assertIncludes(blocked.blockers.map((blocker) => blocker.code), 'SENSITIVE_FIELD_EXPOSURE');
+
+const catalogBlocked = evaluateCatalogFeedReadiness({
+  ...readySnapshot,
+  productId: 'synthetic-product-quality-blocked',
+  catalogQuality: {
+    policyId: 'catalog.product_quality.v1',
+    canActivate: false,
+    blockingIssues: [
+      { code: 'missing_title', field: 'title', message: 'Title is missing.' },
+      { code: 'missing_current_price', field: 'price', message: 'Current price is missing.' },
+    ],
+    blockingMissingFields: ['title', 'price'],
+    nextAction: 'resolve_blockers:title,price',
+  },
+});
+assertEqual(catalogBlocked.readiness, 'blocked');
+assertIncludes(catalogBlocked.blockers.map((blocker) => blocker.code), 'missing_title');
+assertIncludes(catalogBlocked.blockers.map((blocker) => blocker.code), 'missing_current_price');
+assertEqual(catalogBlocked.catalogQuality?.policyId, 'catalog.product_quality.v1');
+assertEqual(catalogBlocked.feedEligibility.includedInDryRun, false);
+
+const catalogUnavailable = evaluateCatalogFeedReadiness({ ...readySnapshot, productId: 'synthetic-product-quality-unavailable', catalogQuality: null });
+assertEqual(catalogUnavailable.readiness, 'blocked');
+assertIncludes(catalogUnavailable.blockers.map((blocker) => blocker.code), 'catalog_quality_unavailable');
 
 const warning = evaluateCatalogFeedReadiness({ ...readySnapshot, productId: 'synthetic-product-3', description: '', generationEstimateMs: 60_001 });
 assertEqual(warning.readiness, 'warning');

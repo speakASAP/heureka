@@ -1,4 +1,5 @@
 export const CATALOG_FEED_READINESS_CONTRACT_VERSION = 'catalog-feed-readiness.v1';
+export const CATALOG_PRODUCT_QUALITY_POLICY_ID = 'catalog.product_quality.v1';
 
 export type CatalogFeedReadinessState = 'ready' | 'warning' | 'blocked' | 'unknown';
 export type CatalogFeedReadinessSeverity = 'warning' | 'blocker';
@@ -9,6 +10,18 @@ export type CatalogFeedReadinessOwnerService =
   | 'warehouse-service'
   | 'heureka-service'
   | 'source-owner';
+
+export type CatalogProductQualityBlockingIssueCode =
+  | 'missing_sku'
+  | 'duplicate_sku'
+  | 'missing_title'
+  | 'missing_description'
+  | 'missing_current_price'
+  | 'missing_image'
+  | 'placeholder_image_only'
+  | 'archived_product'
+  | 'invalid_lifecycle_for_quality'
+  | 'catalog_quality_unavailable';
 
 export type CatalogFeedReadinessBlockerCode =
   | 'PRODUCT_NOT_FOUND'
@@ -25,7 +38,26 @@ export type CatalogFeedReadinessBlockerCode =
   | 'SETTINGS_INACTIVE'
   | 'XML_RENDER_INVALID'
   | 'SENSITIVE_FIELD_EXPOSURE'
-  | 'GENERATION_SLA_RISK';
+  | 'GENERATION_SLA_RISK'
+  | CatalogProductQualityBlockingIssueCode;
+
+export interface CatalogProductQualityIssueSnapshot {
+  code?: string;
+  message?: string;
+  severity?: string;
+  field?: string;
+  source?: string;
+}
+
+export interface CatalogProductQualitySnapshot {
+  policyId?: string;
+  unavailable?: boolean;
+  canActivate?: boolean | null;
+  blockingIssues?: Array<CatalogProductQualityIssueSnapshot | string>;
+  blockingMissingFields?: string[];
+  nextAction?: string | null;
+  missing?: string[];
+}
 
 export interface CatalogFeedReadinessBlocker {
   code: CatalogFeedReadinessBlockerCode;
@@ -49,6 +81,7 @@ export interface CatalogFeedReadinessSnapshot {
   renderableXml?: boolean;
   candidateFeedFields?: string[];
   generationEstimateMs?: number;
+  catalogQuality?: CatalogProductQualitySnapshot | null;
 }
 
 export interface CatalogFeedReadinessItem {
@@ -57,6 +90,15 @@ export interface CatalogFeedReadinessItem {
   availableStock?: number | null;
   settingsActive?: boolean;
   blockers: CatalogFeedReadinessBlocker[];
+  catalogQuality?: {
+    policyId: string;
+    unavailable: boolean;
+    canActivate: boolean | null;
+    blockingIssues: CatalogProductQualityIssueSnapshot[];
+    blockingMissingFields: string[];
+    nextAction: string | null;
+    missing: string[];
+  };
   feedEligibility: {
     includedInDryRun: boolean;
     willMutateCatalog: false;
@@ -189,6 +231,76 @@ const BLOCKERS: Record<CatalogFeedReadinessBlockerCode, CatalogFeedReadinessBloc
     publicReason: 'Synthetic dry-run indicates feed generation may exceed the 60 second SLA.',
     remediationHint: 'Reduce batch size, improve upstream latency, or run performance validation before release.',
   },
+  missing_sku: {
+    code: 'missing_sku',
+    severity: 'blocker',
+    ownerService: 'catalog-service',
+    publicReason: 'Catalog product quality policy blocks products without a SKU.',
+    remediationHint: 'Add a non-empty SKU in Catalog before Heureka feed inclusion.',
+  },
+  duplicate_sku: {
+    code: 'duplicate_sku',
+    severity: 'blocker',
+    ownerService: 'catalog-service',
+    publicReason: 'Catalog product quality policy blocks duplicate SKUs in the owner/source scope.',
+    remediationHint: 'Resolve the duplicate SKU in Catalog before Heureka feed inclusion.',
+  },
+  missing_title: {
+    code: 'missing_title',
+    severity: 'blocker',
+    ownerService: 'catalog-service',
+    publicReason: 'Catalog product quality policy blocks products without a title.',
+    remediationHint: 'Add a title in Catalog before Heureka feed inclusion.',
+  },
+  missing_description: {
+    code: 'missing_description',
+    severity: 'blocker',
+    ownerService: 'catalog-service',
+    publicReason: 'Catalog product quality policy blocks products without a description.',
+    remediationHint: 'Add a public-safe description in Catalog before Heureka feed inclusion.',
+  },
+  missing_current_price: {
+    code: 'missing_current_price',
+    severity: 'blocker',
+    ownerService: 'catalog-pricing-service',
+    publicReason: 'Catalog product quality policy blocks products without a current positive price.',
+    remediationHint: 'Publish a current positive price in Catalog before Heureka feed inclusion.',
+  },
+  missing_image: {
+    code: 'missing_image',
+    severity: 'blocker',
+    ownerService: 'catalog-media-service',
+    publicReason: 'Catalog product quality policy blocks products without an image.',
+    remediationHint: 'Attach an approved non-placeholder image in Catalog media.',
+  },
+  placeholder_image_only: {
+    code: 'placeholder_image_only',
+    severity: 'blocker',
+    ownerService: 'catalog-media-service',
+    publicReason: 'Catalog product quality policy blocks products that only have placeholder image evidence.',
+    remediationHint: 'Replace placeholder media with an approved real product image.',
+  },
+  archived_product: {
+    code: 'archived_product',
+    severity: 'blocker',
+    ownerService: 'catalog-service',
+    publicReason: 'Catalog product quality policy blocks archived products.',
+    remediationHint: 'Keep archived products excluded from Heureka or restore them through Catalog approval.',
+  },
+  invalid_lifecycle_for_quality: {
+    code: 'invalid_lifecycle_for_quality',
+    severity: 'blocker',
+    ownerService: 'catalog-service',
+    publicReason: 'Catalog product lifecycle does not satisfy product quality activation policy.',
+    remediationHint: 'Resolve Catalog quality blockers before activating or including this product.',
+  },
+  catalog_quality_unavailable: {
+    code: 'catalog_quality_unavailable',
+    severity: 'blocker',
+    ownerService: 'catalog-service',
+    publicReason: 'Catalog product quality review contract could not be read.',
+    remediationHint: 'Restore Catalog product quality review access before Heureka feed inclusion.',
+  },
 });
 
 export function evaluateCatalogFeedReadiness(snapshot: CatalogFeedReadinessSnapshot): CatalogFeedReadinessItem {
@@ -199,6 +311,7 @@ export function evaluateCatalogFeedReadiness(snapshot: CatalogFeedReadinessSnaps
     return buildItem(snapshot, blockers, 'unknown');
   }
 
+  blockers.push(...catalogProductQualityBlockers(snapshot.catalogQuality));
   if (snapshot.productActive === false) blockers.push(BLOCKERS.PRODUCT_INACTIVE);
   if (!hasText(snapshot.name)) blockers.push(BLOCKERS.MISSING_PRODUCT_NAME);
   if (!hasText(snapshot.description)) blockers.push(BLOCKERS.MISSING_DESCRIPTION);
@@ -249,12 +362,81 @@ function buildItem(snapshot: CatalogFeedReadinessSnapshot, blockers: CatalogFeed
     availableStock: snapshot.availableStock === undefined ? null : snapshot.availableStock,
     settingsActive: snapshot.settingsActive,
     blockers,
+    catalogQuality: publicCatalogQuality(snapshot.catalogQuality),
     feedEligibility: {
       includedInDryRun: readiness === 'ready' || readiness === 'warning',
       willMutateCatalog: false,
       willPublishFeed: false,
     },
   };
+}
+
+function catalogProductQualityBlockers(quality: CatalogProductQualitySnapshot | null | undefined): CatalogFeedReadinessBlocker[] {
+  if (!quality || quality.unavailable) {
+    return [BLOCKERS.catalog_quality_unavailable];
+  }
+
+  return normalizeCatalogQualityIssues(quality.blockingIssues || []).map((issue) => {
+    const code = issue.code || 'catalog_quality_unavailable';
+    const known = (BLOCKERS as Record<string, CatalogFeedReadinessBlocker>)[code];
+    if (known) {
+      return {
+        ...known,
+        publicReason: issue.message || known.publicReason,
+      };
+    }
+    return {
+      code: code as CatalogFeedReadinessBlockerCode,
+      severity: 'blocker',
+      ownerService: ownerServiceForCatalogQualityIssue(issue),
+      publicReason: issue.message || `Catalog product quality policy blocks this product: ${code}.`,
+      remediationHint: quality.nextAction || 'Resolve the Catalog product quality blocker before Heureka feed inclusion.',
+    };
+  });
+}
+
+function publicCatalogQuality(quality: CatalogProductQualitySnapshot | null | undefined): CatalogFeedReadinessItem['catalogQuality'] {
+  if (!quality) {
+    return {
+      policyId: CATALOG_PRODUCT_QUALITY_POLICY_ID,
+      unavailable: true,
+      canActivate: null,
+      blockingIssues: [],
+      blockingMissingFields: [],
+      nextAction: null,
+      missing: ['[MISSING: Catalog product quality review item]'],
+    };
+  }
+  return {
+    policyId: quality.policyId || CATALOG_PRODUCT_QUALITY_POLICY_ID,
+    unavailable: Boolean(quality.unavailable),
+    canActivate: typeof quality.canActivate === 'boolean' ? quality.canActivate : null,
+    blockingIssues: normalizeCatalogQualityIssues(quality.blockingIssues || []),
+    blockingMissingFields: Array.isArray(quality.blockingMissingFields) ? quality.blockingMissingFields.map((item) => String(item || '').trim()).filter(Boolean) : [],
+    nextAction: hasText(quality.nextAction) ? String(quality.nextAction) : null,
+    missing: Array.isArray(quality.missing) ? quality.missing.map((item) => String(item || '').trim()).filter(Boolean) : [],
+  };
+}
+
+function normalizeCatalogQualityIssues(issues: Array<CatalogProductQualityIssueSnapshot | string>): CatalogProductQualityIssueSnapshot[] {
+  return (Array.isArray(issues) ? issues : []).map((issue) => {
+    if (typeof issue === 'string') return { code: issue };
+    return {
+      code: hasText(issue?.code) ? String(issue.code) : undefined,
+      message: hasText(issue?.message) ? String(issue.message) : undefined,
+      severity: hasText(issue?.severity) ? String(issue.severity) : undefined,
+      field: hasText(issue?.field) ? String(issue.field) : undefined,
+      source: hasText(issue?.source) ? String(issue.source) : undefined,
+    };
+  }).filter((issue) => hasText(issue.code));
+}
+
+function ownerServiceForCatalogQualityIssue(issue: CatalogProductQualityIssueSnapshot): CatalogFeedReadinessOwnerService {
+  const code = String(issue.code || '').toLowerCase();
+  const field = String(issue.field || '').toLowerCase();
+  if (code.includes('price') || field === 'price') return 'catalog-pricing-service';
+  if (code.includes('image') || field === 'image') return 'catalog-media-service';
+  return 'catalog-service';
 }
 
 function hasText(value: unknown): boolean {

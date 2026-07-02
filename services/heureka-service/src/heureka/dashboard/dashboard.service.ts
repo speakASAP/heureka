@@ -31,6 +31,7 @@ type CatalogMarketplaceProfileClient = CatalogClientService & {
   getHeurekaContentPreview?: (productId: string) => Promise<any | null>;
   getHeurekaMarketplaceFields?: (productId: string) => Promise<any | null>;
   updateHeurekaMarketplaceFields?: (productId: string, input: Record<string, unknown>) => Promise<any | null>;
+  getProductQualityReviewForProduct?: (productId: string, product?: any, context?: any) => Promise<any>;
 };
 
 type CentralLifecycleState = 'available' | 'missing_id' | 'stale';
@@ -163,13 +164,14 @@ export class DashboardService {
     const stockByProductId = await this.buildStockAvailabilityLookup(productIds);
     const products = await Promise.all(items.map(async (product) => {
       const productId = this.getCatalogProductId(product);
-      const [pricing, media, marketplaceFields] = productId
+      const [pricing, media, marketplaceFields, catalogQuality] = productId
         ? await Promise.all([
             this.catalogClient.getProductPricing(productId, { authorization }),
             this.catalogClient.getProductMedia(productId, { authorization }),
             this.getHeurekaMarketplaceFields(productId),
+            this.getProductQualityReviewForProduct(productId, product, { authorization, catalogScope }),
           ])
-        : [null, [], null];
+        : [null, [], null, null];
       return this.buildDashboardProduct(product, {
         feedType,
         includedRow: productId ? includedByProduct.get(productId) : null,
@@ -178,6 +180,7 @@ export class DashboardService {
         pricing,
         media,
         marketplaceFields,
+        catalogQuality,
         sourceSettings: catalogSettings,
         catalogScope,
         sourceFilter: source,
@@ -227,7 +230,7 @@ export class DashboardService {
       throw new NotFoundException(`Catalog product ${productId} not found`);
     }
 
-    const [stock, pricing, media, includedRow, offer, settings, contentPreview, marketplaceFields, catalogSettings] = await Promise.all([
+    const [stock, pricing, media, includedRow, offer, settings, contentPreview, marketplaceFields, catalogSettings, catalogQuality] = await Promise.all([
       this.warehouseClient.getTotalAvailable(productId),
       this.catalogClient.getProductPricing(productId, { authorization }),
       this.catalogClient.getProductMedia(productId, { authorization }),
@@ -237,6 +240,7 @@ export class DashboardService {
       this.getHeurekaContentPreview(productId),
       this.getHeurekaMarketplaceFields(productId),
       this.catalogClient.getCatalogSettings({ authorization }),
+      this.getProductQualityReviewForProduct(productId, product, { authorization, catalogScope: 'effective' }),
     ]);
 
     const dashboardProduct = this.buildDashboardProduct(product, {
@@ -246,6 +250,7 @@ export class DashboardService {
       stock,
       pricing,
       media,
+      catalogQuality,
       sourceSettings: catalogSettings,
       catalogScope: 'effective',
       sourceFilter: 'effective',
@@ -283,13 +288,14 @@ export class DashboardService {
 
     const updated = await this.catalogClient.updateProduct(productId, { resaleEnabled }, { authorization });
     const productAfterUpdate = { ...product, ...(updated || {}), resaleEnabled };
-    const [pricing, media, includedRow, offer, catalogSettings, stock] = await Promise.all([
+    const [pricing, media, includedRow, offer, catalogSettings, stock, catalogQuality] = await Promise.all([
       this.catalogClient.getProductPricing(productId, { authorization }),
       this.catalogClient.getProductMedia(productId, { authorization }),
       this.prisma.heurekaProduct.findUnique({ where: { productId } }),
       this.prisma.heurekaOffer.findFirst({ where: { productId }, orderBy: { updatedAt: 'desc' } }),
       this.catalogClient.getCatalogSettings({ authorization }),
       this.warehouseClient.getTotalAvailable(productId),
+      this.getProductQualityReviewForProduct(productId, productAfterUpdate, { authorization, catalogScope: 'effective' }),
     ]);
 
     return this.buildDashboardProduct(productAfterUpdate, {
@@ -299,6 +305,7 @@ export class DashboardService {
       stock,
       pricing,
       media,
+      catalogQuality,
       sourceSettings: catalogSettings,
       catalogScope: 'effective',
       sourceFilter: 'effective',
@@ -986,6 +993,7 @@ export class DashboardService {
   private buildReadinessLanes(byCode: Record<string, string[]>) {
     const stockProductIds = Array.from(new Set([...(byCode.ZERO_STOCK || []), ...(byCode.STOCK_UNKNOWN || [])])).sort();
     const mediaProductIds = Array.from(new Set([...(byCode.MISSING_PRIMARY_IMAGE || []), ...(byCode.INVALID_IMAGE_URL || [])])).sort();
+    const catalogQualityMediaProductIds = Array.from(new Set([...(byCode.missing_image || []), ...(byCode.placeholder_image_only || [])])).sort();
     const catalogProductIds = Array.from(new Set([
       ...(byCode.PRODUCT_NOT_FOUND || []),
       ...(byCode.PRODUCT_INACTIVE || []),
@@ -994,6 +1002,14 @@ export class DashboardService {
       ...(byCode.MISSING_CATEGORY || []),
       ...(byCode.PRICE_MISSING || []),
       ...(byCode.PRICE_NOT_POSITIVE || []),
+      ...(byCode.missing_sku || []),
+      ...(byCode.duplicate_sku || []),
+      ...(byCode.missing_title || []),
+      ...(byCode.missing_description || []),
+      ...(byCode.missing_current_price || []),
+      ...(byCode.archived_product || []),
+      ...(byCode.invalid_lifecycle_for_quality || []),
+      ...(byCode.catalog_quality_unavailable || []),
     ])).sort();
     const settingsProductIds = Array.from(new Set([...(byCode.SETTINGS_INACTIVE || [])])).sort();
 
@@ -1012,24 +1028,42 @@ export class DashboardService {
         nextAction: stockProductIds.length ? 'provide_authoritative_stock_or_exclusion_decision' : 'monitor',
       },
       media: {
-        status: mediaProductIds.length ? 'blocked' : 'ready',
+        status: mediaProductIds.length || catalogQualityMediaProductIds.length ? 'blocked' : 'ready',
         ownerRole: 'Catalog media owner',
-        productCount: mediaProductIds.length,
-        productIds: mediaProductIds,
-        blockerCodes: ['MISSING_PRIMARY_IMAGE', 'INVALID_IMAGE_URL'].filter((code) => byCode[code]?.length),
+        productCount: Array.from(new Set([...mediaProductIds, ...catalogQualityMediaProductIds])).length,
+        productIds: Array.from(new Set([...mediaProductIds, ...catalogQualityMediaProductIds])).sort(),
+        blockerCodes: ['MISSING_PRIMARY_IMAGE', 'INVALID_IMAGE_URL', 'missing_image', 'placeholder_image_only'].filter((code) => byCode[code]?.length),
         blockers: [
           ...(byCode.MISSING_PRIMARY_IMAGE?.length ? [`[MISSING: primary image for ${byCode.MISSING_PRIMARY_IMAGE.length} current active products]`] : []),
-          ...(mediaProductIds.length ? ['[MISSING: approved public image URLs or image files for affected products]'] : []),
+          ...(byCode.missing_image?.length ? [`[MISSING: Catalog quality image for ${byCode.missing_image.length} products]`] : []),
+          ...(byCode.placeholder_image_only?.length ? [`[MISSING: non-placeholder Catalog image for ${byCode.placeholder_image_only.length} products]`] : []),
+          ...(mediaProductIds.length || catalogQualityMediaProductIds.length ? ['[MISSING: approved public image URLs or image files for affected products]'] : []),
           ...(byCode.INVALID_IMAGE_URL?.length ? [`[MISSING: public HTTPS image URL replacement for ${byCode.INVALID_IMAGE_URL.length} products]`] : []),
         ],
-        nextAction: mediaProductIds.length ? 'attach_approved_public_primary_images' : 'monitor',
+        nextAction: mediaProductIds.length || catalogQualityMediaProductIds.length ? 'attach_approved_public_primary_images' : 'monitor',
       },
       catalogContent: {
         status: catalogProductIds.length ? 'blocked' : 'ready',
         ownerRole: 'Catalog/pricing owner',
         productCount: catalogProductIds.length,
         productIds: catalogProductIds,
-        blockerCodes: ['PRODUCT_NOT_FOUND', 'PRODUCT_INACTIVE', 'MISSING_PRODUCT_NAME', 'MISSING_DESCRIPTION', 'MISSING_CATEGORY', 'PRICE_MISSING', 'PRICE_NOT_POSITIVE'].filter((code) => byCode[code]?.length),
+        blockerCodes: [
+          'PRODUCT_NOT_FOUND',
+          'PRODUCT_INACTIVE',
+          'MISSING_PRODUCT_NAME',
+          'MISSING_DESCRIPTION',
+          'MISSING_CATEGORY',
+          'PRICE_MISSING',
+          'PRICE_NOT_POSITIVE',
+          'missing_sku',
+          'duplicate_sku',
+          'missing_title',
+          'missing_description',
+          'missing_current_price',
+          'archived_product',
+          'invalid_lifecycle_for_quality',
+          'catalog_quality_unavailable',
+        ].filter((code) => byCode[code]?.length),
         blockers: [
           ...(byCode.PRODUCT_NOT_FOUND?.length ? [`[MISSING: Catalog rows for ${byCode.PRODUCT_NOT_FOUND.length} active products]`] : []),
           ...(byCode.PRODUCT_INACTIVE?.length ? [`[MISSING: active Catalog approval for ${byCode.PRODUCT_INACTIVE.length} products]`] : []),
@@ -1037,6 +1071,14 @@ export class DashboardService {
           ...(byCode.MISSING_DESCRIPTION?.length ? [`[MISSING: public Heureka description for ${byCode.MISSING_DESCRIPTION.length} products]`] : []),
           ...(byCode.MISSING_CATEGORY?.length ? [`[MISSING: public Heureka category text for ${byCode.MISSING_CATEGORY.length} products]`] : []),
           ...((byCode.PRICE_MISSING?.length || byCode.PRICE_NOT_POSITIVE?.length) ? ['[MISSING: public VAT-inclusive price for affected products]'] : []),
+          ...(byCode.missing_sku?.length ? [`[MISSING: Catalog SKU for ${byCode.missing_sku.length} products]`] : []),
+          ...(byCode.duplicate_sku?.length ? [`[MISSING: unique Catalog SKU for ${byCode.duplicate_sku.length} products]`] : []),
+          ...(byCode.missing_title?.length ? [`[MISSING: Catalog title for ${byCode.missing_title.length} products]`] : []),
+          ...(byCode.missing_description?.length ? [`[MISSING: Catalog quality description for ${byCode.missing_description.length} products]`] : []),
+          ...(byCode.missing_current_price?.length ? [`[MISSING: Catalog current price for ${byCode.missing_current_price.length} products]`] : []),
+          ...(byCode.archived_product?.length ? [`[MISSING: non-archived Catalog lifecycle for ${byCode.archived_product.length} products]`] : []),
+          ...(byCode.invalid_lifecycle_for_quality?.length ? [`[MISSING: Catalog quality lifecycle approval for ${byCode.invalid_lifecycle_for_quality.length} products]`] : []),
+          ...(byCode.catalog_quality_unavailable?.length ? [`[MISSING: Catalog product quality review response for ${byCode.catalog_quality_unavailable.length} products]`] : []),
         ],
         nextAction: catalogProductIds.length ? 'repair_catalog_marketplace_fields_or_pricing' : 'monitor',
       },
@@ -1073,8 +1115,9 @@ export class DashboardService {
 
   private nextActionForReadinessBlockers(blockerCodes: string[]) {
     if (blockerCodes.includes('ZERO_STOCK') || blockerCodes.includes('STOCK_UNKNOWN')) return 'stock_owner_decision';
-    if (blockerCodes.includes('MISSING_PRIMARY_IMAGE') || blockerCodes.includes('INVALID_IMAGE_URL')) return 'media_backfill';
+    if (blockerCodes.includes('MISSING_PRIMARY_IMAGE') || blockerCodes.includes('INVALID_IMAGE_URL') || blockerCodes.includes('missing_image') || blockerCodes.includes('placeholder_image_only')) return 'media_backfill';
     if (blockerCodes.includes('SETTINGS_INACTIVE')) return 'activate_feed_settings';
+    if (blockerCodes.includes('catalog_quality_unavailable')) return 'restore_catalog_quality_review';
     return blockerCodes.length ? 'repair_catalog_content' : 'monitor';
   }
 
@@ -1082,7 +1125,7 @@ export class DashboardService {
     const actions = [];
     if (lanes.stock?.status === 'blocked') actions.push('Stock owner: provide authoritative current stock or exclusion decisions for zero-stock products.');
     if (lanes.media?.status === 'blocked') actions.push('Catalog media owner: attach approved public HTTPS primary images for affected products.');
-    if (lanes.catalogContent?.status === 'blocked') actions.push('Catalog/pricing owner: repair missing public marketplace fields and pricing at the Catalog source.');
+    if (lanes.catalogContent?.status === 'blocked') actions.push('Catalog/pricing owner: repair mandatory Catalog product quality blockers and public marketplace fields at the Catalog source.');
     if (lanes.feedSettings?.status === 'blocked') actions.push('Heureka channel owner: activate feed settings before publication.');
     return actions;
   }
@@ -1143,7 +1186,11 @@ export class DashboardService {
     const category = marketplaceOverrides.categoryText || product.categoryText || product.categoryPath || product.categoryName || product.category || null;
     const name = offer?.title || marketplaceOverrides.productName || product.title || product.name || product.productName || 'Untitled product';
     const catalogSource = this.buildCatalogSourceProjection(product, context.sourceSettings, context.actor, context.catalogScope);
+    const catalogQuality = this.normalizeCatalogQuality(context.catalogQuality);
     const gaps = this.getProductGaps(product, pricing, media, stock, null, category);
+    this.catalogQualityGaps(catalogQuality).forEach((gap) => {
+      if (!gaps.includes(gap)) gaps.push(gap);
+    });
     if (catalogSource.communityVisible === false) gaps.push('catalog_source_resale');
     const quality = this.calculateQuality(gaps);
     const isIncluded = Boolean(context.includedRow?.isIncluded);
@@ -1154,6 +1201,7 @@ export class DashboardService {
       gaps,
       isIncluded,
       hasOffer: Boolean(offer),
+      catalogQuality,
     });
 
     return {
@@ -1179,6 +1227,7 @@ export class DashboardService {
       dataQuality: quality,
       gaps,
       offerId: offer?.id || null,
+      catalogQuality,
       catalogMarketplaceProfile: context.catalogMarketplaceProfile || this.buildCatalogMarketplaceProfile(null, context.marketplaceFields),
       catalogScope: context.catalogScope || 'effective',
       catalogSource,
@@ -1375,12 +1424,15 @@ export class DashboardService {
     return ownerValues.some((value) => actorValues.includes(value));
   }
 
-  private buildProductWorkflowProjection(context: { gaps: string[]; isIncluded: boolean; hasOffer: boolean }) {
+  private buildProductWorkflowProjection(context: { gaps: string[]; isIncluded: boolean; hasOffer: boolean; catalogQuality?: any }) {
     const blockers = (context.gaps || []).map((gap) => ({
       code: String(gap || '').toUpperCase().replace(/[^A-Z0-9]+/g, '_'),
       field: gap,
       message: this.workflowBlockerMessage(gap),
     }));
+    for (const blocker of this.catalogQualityWorkflowBlockers(context.catalogQuality)) {
+      if (!blockers.some((existing) => existing.code === blocker.code)) blockers.push(blocker);
+    }
 
     if (blockers.length) {
       return {
@@ -1425,9 +1477,91 @@ export class DashboardService {
     };
   }
 
+  private normalizeCatalogQuality(value: any) {
+    const item = value?.item || value?.quality || value || null;
+    const blockingIssues = Array.isArray(item?.blockingIssues)
+      ? item.blockingIssues
+      : Array.isArray(value?.blockingIssues)
+        ? value.blockingIssues
+        : [];
+    const unavailable = Boolean(value?.unavailable) || !item;
+    const missing = Array.isArray(value?.missing) ? value.missing : Array.isArray(item?.missing) ? item.missing : [];
+    return {
+      policyId: value?.policyId || item?.policyId || 'catalog.product_quality.v1',
+      source: value?.source || 'review_queue',
+      unavailable,
+      canActivate: typeof item?.canActivate === 'boolean' ? item.canActivate : (unavailable ? null : blockingIssues.length === 0),
+      blockingIssues: this.normalizeCatalogQualityIssues(blockingIssues),
+      blockingMissingFields: Array.isArray(item?.blockingMissingFields) ? item.blockingMissingFields : [],
+      nextAction: item?.nextAction || (unavailable ? 'resolve_catalog_quality_review_access' : null),
+      missing,
+    };
+  }
+
+  private normalizeCatalogQualityIssues(issues: any[]) {
+    return (Array.isArray(issues) ? issues : []).map((issue) => {
+      if (typeof issue === 'string') return { code: issue, field: this.catalogQualityField(issue), message: issue };
+      const code = this.optionalString(issue?.code);
+      return {
+        code,
+        field: this.optionalString(issue?.field) || this.catalogQualityField(code),
+        message: this.optionalString(issue?.message) || code || 'Catalog quality blocker',
+        severity: this.optionalString(issue?.severity) || 'blocking',
+        source: this.optionalString(issue?.source) || 'catalog.product_quality.v1',
+      };
+    }).filter((issue) => issue.code);
+  }
+
+  private catalogQualityGaps(catalogQuality: any): string[] {
+    if (!catalogQuality || catalogQuality.unavailable) return ['catalog_quality'];
+    const gaps = new Set<string>();
+    for (const issue of catalogQuality.blockingIssues || []) {
+      const field = this.catalogQualityField(issue?.code || issue?.field);
+      if (field) gaps.add(field);
+    }
+    return Array.from(gaps);
+  }
+
+  private catalogQualityWorkflowBlockers(catalogQuality: any) {
+    if (!catalogQuality || catalogQuality.unavailable) {
+      return [{
+        code: 'catalog_quality_unavailable',
+        field: 'catalog_quality',
+        message: (catalogQuality?.missing || []).join(', ') || 'Catalog product quality review is unavailable.',
+        policyId: 'catalog.product_quality.v1',
+        source: 'catalog-microservice',
+      }];
+    }
+    return (catalogQuality.blockingIssues || []).map((issue: any) => ({
+      code: issue.code,
+      field: issue.field || this.catalogQualityField(issue.code),
+      message: issue.message || this.workflowBlockerMessage(issue.field || issue.code),
+      policyId: catalogQuality.policyId || 'catalog.product_quality.v1',
+      source: 'catalog-microservice',
+    }));
+  }
+
+  private catalogQualityField(codeOrField: unknown): string | null {
+    const code = String(codeOrField || '').trim();
+    const fields: Record<string, string> = {
+      missing_sku: 'sku',
+      duplicate_sku: 'sku',
+      missing_title: 'product_name',
+      missing_description: 'description',
+      missing_current_price: 'price',
+      missing_image: 'image',
+      placeholder_image_only: 'image',
+      archived_product: 'catalog_lifecycle',
+      invalid_lifecycle_for_quality: 'catalog_lifecycle',
+      catalog_quality_unavailable: 'catalog_quality',
+    };
+    return fields[code] || (code && code !== 'missing_ean' ? code : null);
+  }
+
   private workflowBlockerMessage(gap: string) {
     const labels: Record<string, string> = {
       catalog_product_id: 'Catalog product identifier is missing.',
+      sku: 'Catalog SKU is missing or duplicated.',
       product_name: 'Product name is missing.',
       description: 'Public product description is missing.',
       ean: 'EAN is missing.',
@@ -1436,6 +1570,8 @@ export class DashboardService {
       price: 'Price is missing.',
       image: 'Primary product image is missing.',
       stock: 'Warehouse stock is zero or unavailable.',
+      catalog_lifecycle: 'Catalog lifecycle blocks Heureka feed inclusion.',
+      catalog_quality: 'Catalog product quality review is unavailable.',
       catalog_source_resale: 'Catalog source resale is not enabled for community visibility.',
     };
     return labels[gap] || `Missing or invalid field: ${gap}`;
@@ -1457,6 +1593,19 @@ export class DashboardService {
       return null;
     }
     return catalogClient.getHeurekaMarketplaceFields(productId);
+  }
+
+  private async getProductQualityReviewForProduct(productId: string, product: any, context: any): Promise<any> {
+    const catalogClient = this.catalogClient as CatalogMarketplaceProfileClient;
+    if (typeof catalogClient.getProductQualityReviewForProduct !== 'function') {
+      return {
+        policyId: 'catalog.product_quality.v1',
+        unavailable: true,
+        item: null,
+        missing: ['[MISSING: Heureka Catalog product quality client method]'],
+      };
+    }
+    return catalogClient.getProductQualityReviewForProduct(productId, product, context);
   }
 
   private async updateHeurekaMarketplaceOverrides(productId: string, title: string | null, body: any) {
@@ -1599,7 +1748,6 @@ export class DashboardService {
     if (!this.getCatalogProductId(product)) gaps.push('catalog_product_id');
     if (!(product.title || product.name || product.productName)) gaps.push('product_name');
     if (!(product.description || descriptionFallback)) gaps.push('description');
-    if (!(product.ean || product.barcode)) gaps.push('ean');
     if (!(product.brand || product.manufacturer)) gaps.push('manufacturer');
     if (!(product.categoryText || product.categoryPath || product.categoryName || product.category || categoryFallback)) gaps.push('category');
     if (!this.toNumber(pricing?.priceVat ?? pricing?.priceWithVat ?? pricing?.basePrice ?? pricing?.price)) gaps.push('price');

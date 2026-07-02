@@ -3,9 +3,51 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { LoggerService } from '../logger/logger.service';
 
-type CatalogRequestContext = {
+export type CatalogRequestContext = {
   authorization?: string;
   catalogScope?: string;
+};
+
+export const CATALOG_PRODUCT_QUALITY_POLICY_ID = 'catalog.product_quality.v1';
+
+export type CatalogProductQualityIssue = {
+  code: string;
+  message?: string;
+  severity?: string;
+  field?: string;
+  source?: string;
+};
+
+export type CatalogProductQualityReviewItem = {
+  productId: string;
+  sku?: string | null;
+  title?: string | null;
+  lifecycle?: string | null;
+  canActivate?: boolean;
+  completionScore?: number;
+  blockingIssues?: CatalogProductQualityIssue[];
+  blockingMissingFields?: string[];
+  optionalOpportunities?: CatalogProductQualityIssue[];
+  nextAction?: string;
+};
+
+export type CatalogProductQualityReviewResponse = {
+  policyId: string;
+  blockers: string[];
+  items: CatalogProductQualityReviewItem[];
+  total: number;
+  page: number;
+  limit: number;
+  unavailable?: boolean;
+};
+
+export type CatalogProductQualityReviewLookup = {
+  policyId: string;
+  item: CatalogProductQualityReviewItem | null;
+  unavailable: boolean;
+  source: 'embedded_product' | 'review_queue' | 'unavailable';
+  blockers: string[];
+  missing: string[];
 };
 
 /**
@@ -227,6 +269,105 @@ export class CatalogClientService {
   }
 
   /**
+   * Read Catalog Goal 25 product quality review queue.
+   */
+  async getProductQualityReview(query: {
+    search?: string;
+    isActive?: boolean;
+    lifecycle?: string;
+    catalogScope?: string;
+    page?: number;
+    limit?: number;
+    missingField?: string;
+    severity?: 'blocking' | 'optional';
+  } = {}, context: CatalogRequestContext = {}): Promise<CatalogProductQualityReviewResponse> {
+    try {
+      const params = new URLSearchParams();
+      if (query.search) params.append('search', query.search);
+      if (query.isActive !== undefined) params.append('isActive', String(query.isActive));
+      if (query.lifecycle) params.append('lifecycle', query.lifecycle);
+      if (query.catalogScope || context.catalogScope) params.append('catalogScope', String(query.catalogScope || context.catalogScope));
+      if (query.page) params.append('page', String(query.page));
+      if (query.limit) params.append('limit', String(query.limit));
+      if (query.missingField) params.append('missingField', query.missingField);
+      if (query.severity) params.append('severity', query.severity);
+
+      const response = await firstValueFrom(
+        this.httpService.get(`${this.baseUrl}/api/products/review/quality?${params.toString()}`, this.catalogRequestOptions(context))
+      );
+      const payload = response.data || {};
+      return {
+        policyId: payload.policyId || CATALOG_PRODUCT_QUALITY_POLICY_ID,
+        blockers: Array.isArray(payload.blockers) ? payload.blockers : [],
+        items: Array.isArray(payload.data) ? payload.data : Array.isArray(payload.items) ? payload.items : [],
+        total: Number(payload.pagination?.total ?? payload.total ?? 0),
+        page: Number(payload.pagination?.page ?? query.page ?? 1),
+        limit: Number(payload.pagination?.limit ?? query.limit ?? 100),
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(`Catalog product quality review unavailable: ${errorMessage}`, 'CatalogClient');
+      return {
+        policyId: CATALOG_PRODUCT_QUALITY_POLICY_ID,
+        blockers: ['[MISSING: Catalog product quality review contract response]'],
+        items: [],
+        total: 0,
+        page: Number(query.page || 1),
+        limit: Number(query.limit || 100),
+        unavailable: true,
+      };
+    }
+  }
+
+  /**
+   * Resolve one product's Catalog Goal 25 quality item through the stable review queue.
+   */
+  async getProductQualityReviewForProduct(productId: string, product: any = null, context: CatalogRequestContext = {}): Promise<CatalogProductQualityReviewLookup> {
+    const normalizedProductId = String(productId || '').trim();
+    const embedded = this.extractEmbeddedProductQualityReview(normalizedProductId, product);
+    if (embedded) return embedded;
+
+    const seen = new Set<string>();
+    const terms = [
+      product?.sku,
+      product?.SKU,
+      product?.code,
+      product?.productCode,
+      product?.title,
+      product?.name,
+      product?.productName,
+      normalizedProductId,
+    ].map((value) => String(value || '').trim()).filter(Boolean).filter((value) => {
+      const key = value.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    for (const term of terms) {
+      const review = await this.getProductQualityReview({ search: term, isActive: true, catalogScope: context.catalogScope, page: 1, limit: 100 }, context);
+      if (review.unavailable) return this.unavailableProductQualityLookup(normalizedProductId, review.blockers);
+      const item = this.findProductQualityItem(review.items, normalizedProductId);
+      if (item) {
+        return { policyId: review.policyId, item, unavailable: false, source: 'review_queue', blockers: review.blockers, missing: [] };
+      }
+    }
+
+    const maxPages = this.clampProductQualityLookupPages(process.env.CATALOG_PRODUCT_QUALITY_LOOKUP_MAX_PAGES);
+    for (let page = 1; page <= maxPages; page += 1) {
+      const review = await this.getProductQualityReview({ isActive: true, catalogScope: context.catalogScope, page, limit: 100 }, context);
+      if (review.unavailable) return this.unavailableProductQualityLookup(normalizedProductId, review.blockers);
+      const item = this.findProductQualityItem(review.items, normalizedProductId);
+      if (item) {
+        return { policyId: review.policyId, item, unavailable: false, source: 'review_queue', blockers: review.blockers, missing: [] };
+      }
+      if (!review.items.length || review.items.length < review.limit || (review.total && page * review.limit >= review.total)) break;
+    }
+
+    return this.unavailableProductQualityLookup(normalizedProductId, [`[MISSING: Catalog product quality review item for ${normalizedProductId || 'unknown product'}]`]);
+  }
+
+  /**
    * Provision private user Catalog settings without changing source opt-ins.
    */
   async provisionCatalogAccess(authorization: string | undefined, sourceApplication = 'heureka-service'): Promise<any | null> {
@@ -284,6 +425,66 @@ export class CatalogClientService {
       this.logger.warn(`${label} update failed for product ${productId}: ${errorMessage}`, 'CatalogClient');
       return null;
     }
+  }
+
+  private extractEmbeddedProductQualityReview(productId: string, product: any): CatalogProductQualityReviewLookup | null {
+    if (!product || typeof product !== 'object') return null;
+    const source = product.productQualityReview || product.qualityReview || product.quality || null;
+    const blockingIssues = Array.isArray(source?.blockingIssues)
+      ? source.blockingIssues
+      : Array.isArray(product.blockingIssues)
+        ? product.blockingIssues
+        : null;
+    if (!source && !blockingIssues) return null;
+    const item: CatalogProductQualityReviewItem = {
+      productId,
+      sku: product.sku || product.code || source?.sku || null,
+      title: product.title || product.name || product.productName || source?.title || null,
+      lifecycle: product.lifecycle || source?.lifecycle || null,
+      canActivate: typeof source?.canActivate === 'boolean' ? source.canActivate : !(blockingIssues || []).length,
+      completionScore: source?.completionScore,
+      blockingIssues: this.normalizeProductQualityIssues(blockingIssues || []),
+      blockingMissingFields: Array.isArray(source?.blockingMissingFields) ? source.blockingMissingFields : [],
+      optionalOpportunities: this.normalizeProductQualityIssues(source?.optionalOpportunities || []),
+      nextAction: source?.nextAction,
+    };
+    return { policyId: source?.policyId || CATALOG_PRODUCT_QUALITY_POLICY_ID, item, unavailable: false, source: 'embedded_product', blockers: [], missing: [] };
+  }
+
+  private normalizeProductQualityIssues(issues: unknown): CatalogProductQualityIssue[] {
+    if (!Array.isArray(issues)) return [];
+    return issues.map((issue) => {
+      if (typeof issue === 'string') return { code: issue };
+      return {
+        code: String((issue as any)?.code || '').trim(),
+        message: (issue as any)?.message,
+        severity: (issue as any)?.severity,
+        field: (issue as any)?.field,
+        source: (issue as any)?.source,
+      };
+    }).filter((issue) => issue.code);
+  }
+
+  private findProductQualityItem(items: CatalogProductQualityReviewItem[], productId: string): CatalogProductQualityReviewItem | null {
+    const normalizedProductId = String(productId || '').trim();
+    return (items || []).find((item) => String(item?.productId || '').trim() === normalizedProductId) || null;
+  }
+
+  private unavailableProductQualityLookup(productId: string, blockers: string[] = []): CatalogProductQualityReviewLookup {
+    return {
+      policyId: CATALOG_PRODUCT_QUALITY_POLICY_ID,
+      item: null,
+      unavailable: true,
+      source: 'unavailable',
+      blockers,
+      missing: blockers.length ? blockers : [`[MISSING: Catalog product quality review item for ${productId || 'unknown product'}]`],
+    };
+  }
+
+  private clampProductQualityLookupPages(value: unknown): number {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return 3;
+    return Math.max(1, Math.min(25, Math.floor(parsed)));
   }
 
 

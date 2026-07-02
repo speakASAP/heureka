@@ -350,11 +350,19 @@ function buildLanes(byBlockerCode, warehouseRows, productIds) {
   const stockUnknown = byBlockerCode.STOCK_UNKNOWN || [];
   const missingImage = byBlockerCode.MISSING_PRIMARY_IMAGE || [];
   const invalidImage = byBlockerCode.INVALID_IMAGE_URL || [];
+  const catalogMissingImage = byBlockerCode.missing_image || [];
+  const catalogPlaceholderImage = byBlockerCode.placeholder_image_only || [];
   const productNotFound = byBlockerCode.PRODUCT_NOT_FOUND || [];
   const missingDescription = byBlockerCode.MISSING_DESCRIPTION || [];
   const missingCategory = byBlockerCode.MISSING_CATEGORY || [];
   const missingName = byBlockerCode.MISSING_PRODUCT_NAME || [];
   const missingPrice = [...(byBlockerCode.PRICE_MISSING || []), ...(byBlockerCode.PRICE_NOT_POSITIVE || [])];
+  const catalogSku = [...(byBlockerCode.missing_sku || []), ...(byBlockerCode.duplicate_sku || [])];
+  const catalogTitle = byBlockerCode.missing_title || [];
+  const catalogDescription = byBlockerCode.missing_description || [];
+  const catalogPrice = byBlockerCode.missing_current_price || [];
+  const catalogLifecycle = [...(byBlockerCode.archived_product || []), ...(byBlockerCode.invalid_lifecycle_for_quality || [])];
+  const catalogQualityUnavailable = byBlockerCode.catalog_quality_unavailable || [];
 
   return {
     stock: {
@@ -373,12 +381,15 @@ function buildLanes(byBlockerCode, warehouseRows, productIds) {
       forbiddenAction: 'Do not fabricate stock quantities from order history.',
     },
     media: {
-      status: missingImage.length || invalidImage.length ? 'blocked' : 'ready',
-      missingPrimaryImageProductIds: missingImage,
+      status: missingImage.length || invalidImage.length || catalogMissingImage.length || catalogPlaceholderImage.length ? 'blocked' : 'ready',
+      missingPrimaryImageProductIds: Array.from(new Set([...missingImage, ...catalogMissingImage])).sort(),
+      placeholderOnlyImageProductIds: catalogPlaceholderImage,
       invalidImageProductIds: invalidImage,
       blockers: [
         ...(missingImage.length ? [`[MISSING: primary image for ${missingImage.length} current active products]`] : []),
-        ...(missingImage.length ? ['[MISSING: approved public image URLs or image files for affected products]'] : []),
+        ...(catalogMissingImage.length ? [`[MISSING: Catalog product-quality image for ${catalogMissingImage.length} products]`] : []),
+        ...(catalogPlaceholderImage.length ? [`[MISSING: non-placeholder Catalog image for ${catalogPlaceholderImage.length} products]`] : []),
+        ...(missingImage.length || catalogMissingImage.length || catalogPlaceholderImage.length ? ['[MISSING: approved public image URLs or image files for affected products]'] : []),
         ...(invalidImage.length ? [`[MISSING: public HTTPS image URL replacement for ${invalidImage.length} products]`] : []),
       ],
       ownerRole: 'Catalog media owner',
@@ -386,21 +397,31 @@ function buildLanes(byBlockerCode, warehouseRows, productIds) {
       forbiddenAction: 'Do not invent product images or use private/non-public URLs.',
     },
     catalogContent: {
-      status: productNotFound.length || missingName.length || missingDescription.length || missingCategory.length || missingPrice.length ? 'blocked' : 'ready',
+      status: productNotFound.length || missingName.length || missingDescription.length || missingCategory.length || missingPrice.length || catalogSku.length || catalogTitle.length || catalogDescription.length || catalogPrice.length || catalogLifecycle.length || catalogQualityUnavailable.length ? 'blocked' : 'ready',
       productNotFoundProductIds: productNotFound,
       missingNameProductIds: missingName,
-      missingDescriptionProductIds: missingDescription,
+      missingSkuProductIds: Array.from(new Set(catalogSku)).sort(),
+      missingTitleProductIds: catalogTitle,
+      missingDescriptionProductIds: Array.from(new Set([...missingDescription, ...catalogDescription])).sort(),
       missingCategoryProductIds: missingCategory,
-      missingPriceProductIds: Array.from(new Set(missingPrice)).sort(),
+      missingPriceProductIds: Array.from(new Set([...missingPrice, ...catalogPrice])).sort(),
+      lifecycleBlockedProductIds: Array.from(new Set(catalogLifecycle)).sort(),
+      catalogQualityUnavailableProductIds: catalogQualityUnavailable,
       blockers: [
         ...(productNotFound.length ? [`[MISSING: Catalog rows for ${productNotFound.length} active products]`] : []),
         ...(missingName.length ? [`[MISSING: public product name for ${missingName.length} products]`] : []),
         ...(missingDescription.length ? [`[MISSING: public Heureka description for ${missingDescription.length} products]`] : []),
         ...(missingCategory.length ? [`[MISSING: public Heureka category text for ${missingCategory.length} products]`] : []),
         ...(missingPrice.length ? [`[MISSING: public VAT-inclusive price for ${new Set(missingPrice).size} products]`] : []),
+        ...(catalogSku.length ? [`[MISSING: Catalog product-quality SKU repair for ${new Set(catalogSku).size} products]`] : []),
+        ...(catalogTitle.length ? [`[MISSING: Catalog product-quality title for ${catalogTitle.length} products]`] : []),
+        ...(catalogDescription.length ? [`[MISSING: Catalog product-quality description for ${catalogDescription.length} products]`] : []),
+        ...(catalogPrice.length ? [`[MISSING: Catalog product-quality current price for ${catalogPrice.length} products]`] : []),
+        ...(catalogLifecycle.length ? [`[MISSING: Catalog lifecycle approval for ${new Set(catalogLifecycle).size} products]`] : []),
+        ...(catalogQualityUnavailable.length ? [`[MISSING: Catalog product quality review response for ${catalogQualityUnavailable.length} products]`] : []),
       ],
       ownerRole: 'Catalog/pricing owner',
-      allowedAction: 'Repair public Catalog marketplace fields and pricing through guarded Catalog workflows.',
+      allowedAction: 'Repair mandatory Catalog product quality blockers, public marketplace fields, and pricing through guarded Catalog workflows.',
       forbiddenAction: 'Do not patch feed XML directly around missing Catalog source data.',
     },
   };
@@ -467,7 +488,7 @@ async function main() {
     nextActions: [
       ...(lanes.stock.status === 'blocked' ? ['Stock owner: provide authoritative current stock or exclusion decisions for zero-stock products.'] : []),
       ...(lanes.media.status === 'blocked' ? ['Catalog media owner: attach approved public HTTPS primary images for affected products.'] : []),
-      ...(lanes.catalogContent.status === 'blocked' ? ['Catalog/pricing owner: repair missing public marketplace fields and pricing at the Catalog source.'] : []),
+      ...(lanes.catalogContent.status === 'blocked' ? ['Catalog/pricing owner: repair mandatory Catalog product quality blockers and public marketplace fields at the Catalog source.'] : []),
     ],
   };
 
