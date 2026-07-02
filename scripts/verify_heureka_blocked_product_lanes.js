@@ -230,6 +230,37 @@ async function fetchWarehouseAvailability(warehouseBaseUrl, productIds) {
   return { rows, byProductId };
 }
 
+async function fetchFeedStatusEvidence(heurekaBaseUrl, feedType, productIds) {
+  const concurrency = numberEnv('HEUREKA_VERIFY_FEED_STATUS_CONCURRENCY', 5, 1, 20);
+  const evidence = await mapLimit(productIds, concurrency, async (productId) => {
+    const result = {
+      productId,
+      statusAvailable: false,
+      included: null,
+      hasExplicitFeedProduct: false,
+      feedProductId: null,
+      error: null,
+    };
+    try {
+      const payload = await requestJson(`${heurekaBaseUrl}/heureka/products/${encodeURIComponent(productId)}/status?feedType=${encodeURIComponent(feedType)}`, {
+        headers: jsonHeaders(),
+        label: `Heureka product feed status ${productId}`,
+      });
+      const data = payload?.data || payload;
+      result.statusAvailable = true;
+      result.included = Boolean(data?.included);
+      result.hasExplicitFeedProduct = Boolean(data?.feedProduct);
+      result.feedProductId = optionalString(data?.feedProduct?.id);
+    } catch (error) {
+      result.error = String(error?.message || error);
+    }
+    return result;
+  });
+
+  const byProductId = new Map(evidence.map((item) => [item.productId, item]));
+  return { evidence, byProductId };
+}
+
 async function mapLimit(items, limit, mapper) {
   const results = new Array(items.length);
   let nextIndex = 0;
@@ -328,10 +359,11 @@ function blockerCounts(byBlockerCode) {
   );
 }
 
-function productEvidence(productIds, productsById, readinessById, warehouseById) {
+function productEvidence(productIds, productsById, readinessById, warehouseById, feedStatusById = new Map()) {
   return productIds.map((productId) => {
     const product = productsById.get(productId) || {};
     const readiness = readinessById.get(productId) || {};
+    const feedStatus = feedStatusById.get(productId) || {};
     return {
       productId,
       sku: productSkuOf(product),
@@ -341,13 +373,20 @@ function productEvidence(productIds, productsById, readinessById, warehouseById)
       blockers: (readiness.blockers || []).map((blocker) => blocker.code).filter(Boolean),
       readinessAvailableStock: readiness.availableStock === undefined ? null : readiness.availableStock,
       warehouseTotalAvailable: warehouseById.has(productId) ? warehouseById.get(productId) : null,
+      feedIncluded: feedStatus.included === undefined ? null : feedStatus.included,
+      explicitFeedExclusion: Boolean(feedStatus.hasExplicitFeedProduct && feedStatus.included === false),
     };
   });
 }
 
-function buildLanes(byBlockerCode, warehouseRows, productIds) {
+function buildLanes(byBlockerCode, warehouseRows, productIds, feedStatusById = new Map()) {
   const zeroStock = byBlockerCode.ZERO_STOCK || [];
   const stockUnknown = byBlockerCode.STOCK_UNKNOWN || [];
+  const explicitlyExcludedZeroStock = zeroStock.filter((productId) => {
+    const status = feedStatusById.get(productId);
+    return Boolean(status?.hasExplicitFeedProduct && status.included === false);
+  });
+  const unresolvedZeroStock = zeroStock.filter((productId) => !explicitlyExcludedZeroStock.includes(productId));
   const missingImage = byBlockerCode.MISSING_PRIMARY_IMAGE || [];
   const invalidImage = byBlockerCode.INVALID_IMAGE_URL || [];
   const catalogMissingImage = byBlockerCode.missing_image || [];
@@ -366,16 +405,18 @@ function buildLanes(byBlockerCode, warehouseRows, productIds) {
 
   return {
     stock: {
-      status: zeroStock.length || stockUnknown.length ? 'blocked' : 'ready',
+      status: unresolvedZeroStock.length || stockUnknown.length ? 'blocked' : 'ready',
       zeroStockProductIds: zeroStock,
+      explicitlyExcludedZeroStockProductIds: explicitlyExcludedZeroStock,
+      unresolvedZeroStockProductIds: unresolvedZeroStock,
       stockUnknownProductIds: stockUnknown,
       warehouseRows: warehouseRows.length,
       warehouseRowsMissing: productIds.filter((productId) => !warehouseRows.some((row) => row?.productId === productId)),
       blockers: [
-        ...(zeroStock.length ? [`[MISSING: stock for ${zeroStock.length} current active products]`] : []),
+        ...(unresolvedZeroStock.length ? [`[MISSING: stock or explicit Heureka exclusion for ${unresolvedZeroStock.length} current active products]`] : []),
         ...(stockUnknown.length ? [`[MISSING: authoritative Warehouse availability for ${stockUnknown.length} current active products]`] : []),
-        ...(zeroStock.length ? ['[UNKNOWN: which zero-stock products should be listed on Heureka now]'] : []),
       ],
+      resolvedByExclusion: explicitlyExcludedZeroStock.length,
       ownerRole: 'Warehouse/data owner',
       allowedAction: 'Provide authoritative current stock or explicitly keep products excluded from Heureka feed.',
       forbiddenAction: 'Do not fabricate stock quantities from order history.',
@@ -450,10 +491,13 @@ async function main() {
 
   const indexed = indexReadinessItems(readiness.items);
   const counts = blockerCounts(indexed.byBlockerCode);
-  const lanes = buildLanes(indexed.byBlockerCode, warehouse.rows, productIds);
   const blockedProductIds = Array.from(new Set(
     Object.values(indexed.byBlockerCode).flat(),
   )).sort();
+  const feedStatusEvidence = blockedProductIds.length
+    ? await fetchFeedStatusEvidence(heurekaBaseUrl, feedType, blockedProductIds)
+    : { evidence: [], byProductId: new Map() };
+  const lanes = buildLanes(indexed.byBlockerCode, warehouse.rows, productIds, feedStatusEvidence.byProductId);
   const mediaEvidenceIds = Array.from(new Set([
     ...(indexed.byBlockerCode.MISSING_PRIMARY_IMAGE || []),
     ...(indexed.byBlockerCode.INVALID_IMAGE_URL || []),
@@ -483,8 +527,13 @@ async function main() {
       responseCount: readiness.responses.length,
     },
     lanes,
+    feedStatusEvidence: {
+      inspected: feedStatusEvidence.evidence.length,
+      explicitExclusions: feedStatusEvidence.evidence.filter((item) => item.hasExplicitFeedProduct && item.included === false).length,
+      items: feedStatusEvidence.evidence,
+    },
     mediaEvidence,
-    blockedProducts: productEvidence(blockedProductIds, productsById, indexed.byProductId, warehouse.byProductId),
+    blockedProducts: productEvidence(blockedProductIds, productsById, indexed.byProductId, warehouse.byProductId, feedStatusEvidence.byProductId),
     nextActions: [
       ...(lanes.stock.status === 'blocked' ? ['Stock owner: provide authoritative current stock or exclusion decisions for zero-stock products.'] : []),
       ...(lanes.media.status === 'blocked' ? ['Catalog media owner: attach approved public HTTPS primary images for affected products.'] : []),
