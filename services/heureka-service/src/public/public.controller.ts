@@ -428,13 +428,13 @@ export class PublicController {
             <h2>Orders</h2>
             <p id="orders-count">Loading Heureka orders</p>
           </div>
-          <select id="orders-status-filter" aria-label="Order status"><option value="all">All statuses</option><option value="pending">Pending</option><option value="failed">Failed</option><option value="cancelled">Cancelled</option></select>
+          <select id="orders-status-filter" aria-label="Local order status"><option value="all">All local statuses</option><option value="pending">Pending</option><option value="failed">Failed</option><option value="cancelled">Cancelled</option></select>
         </div>
         <div id="orders-metrics" class="dashboard-metrics"></div>
         <div class="table-scroll">
           <table class="dashboard-table">
             <thead>
-              <tr><th>External ID</th><th>Central order</th><th>Customer</th><th>Total</th><th>Status</th><th>Forwarded</th><th>Created</th></tr>
+              <tr><th>External ID</th><th>Central order</th><th>Customer</th><th>Total</th><th>Lifecycle</th><th>Local</th><th>Forwarding</th><th>Created</th></tr>
             </thead>
             <tbody id="orders-table-body"></tbody>
           </table>
@@ -785,11 +785,18 @@ export class PublicController {
 
   function renderCatalogSourceDetail(product) {
     var source = product.catalogSource || {};
-    var readOnlyCopy = source.readOnlyCatalogRecord ? 'Catalog product record is read-only in Heureka; edit only the Heureka listing here.' : 'Owner Catalog product; product data and resale sharing are managed in Catalog Dashboard.';
+    var canToggleResale = source.canToggleResaleInHeureka === true && source.resaleMutationPath;
+    var readOnlyCopy = source.readOnlyCatalogRecord
+      ? 'Catalog product record is read-only in Heureka; edit only the Heureka listing here.'
+      : 'Owner Catalog product; product data and resale sharing can be changed here or in Catalog Dashboard.';
+    var localToggle = canToggleResale
+      ? '<label class="check-row resale-toggle-row"><span>Publish this product for community resale</span><input data-resale-toggle="' + escapeHtml(product.id) + '" type="checkbox" ' + (source.resaleEnabled === true ? 'checked' : '') + '></label><p class="table-subtext" id="resale-toggle-status">Owner-only Catalog update through Heureka.</p>'
+      : '<p class="table-subtext">Local resale toggle is read-only for this source; Alfares and other seller products keep their Catalog owner guard.</p>';
     return '<div class="catalog-source-card"><strong>Catalog source</strong>' +
       '<p>' + catalogSourceChip(source) + ' ' + escapeHtml(source.label || catalogSourceLabel(source)) + '</p>' +
       '<p>Resale: ' + escapeHtml(catalogResaleLabel(source)) + '</p>' +
       '<p>' + escapeHtml(readOnlyCopy) + '</p>' +
+      localToggle +
       '<div class="catalog-source-actions">' +
         '<a href="' + escapeHtml(CATALOG_PRODUCTS_URL) + '" target="_blank" rel="noreferrer">Manage products</a>' +
         '<a href="' + escapeHtml(CATALOG_CREATE_URL) + '" target="_blank" rel="noreferrer">Create product</a>' +
@@ -913,6 +920,29 @@ export class PublicController {
       '<label class="check-row"><span>Active listing</span><input name="isActive" type="checkbox" ' + (listing.isActive !== false ? 'checked' : '') + '></label>' +
       '<button class="primary-button button-reset" type="submit">Save changes</button>' +
       '</form>';
+    var resaleToggle = panel.querySelector('[data-resale-toggle]');
+    if (resaleToggle) {
+      resaleToggle.addEventListener('change', function (event) {
+        var input = event.currentTarget;
+        var status = document.getElementById('resale-toggle-status');
+        input.disabled = true;
+        if (status) status.textContent = 'Saving resale sharing in Catalog';
+        api('/heureka/dashboard/products/' + encodeURIComponent(product.id) + '/resale', {
+          method: 'PUT',
+          body: { resaleEnabled: input.checked }
+        }).then(function (payload) {
+          if (status) status.textContent = input.checked ? 'Product is shared for community resale.' : 'Product is private in Catalog resale.';
+          renderProductDetail(payload.data || product);
+        }).catch(function (error) {
+          input.checked = !input.checked;
+          showDashboardError(error);
+          if (status) status.textContent = 'Catalog owner guard rejected the resale update.';
+        }).finally(function () {
+          input.disabled = false;
+        });
+      });
+    }
+
     document.getElementById('listing-form').addEventListener('submit', function (event) {
       event.preventDefault();
       var form = event.currentTarget;
@@ -950,19 +980,32 @@ export class PublicController {
     if (count) count.textContent = formatNumber(data.total || 0) + ' Heureka orders';
     if (metrics) {
       var counts = data.statusCounts || {};
+      var centralCounts = data.centralStatusCounts || {};
       metrics.innerHTML = [
-        ['Pending', counts.pending || 0, 'Awaiting processing'],
-        ['Forwarded', counts.forwarded || 0, 'Sent to Orders'],
-        ['Failed', counts.failed || 0, 'Needs review'],
-        ['Cancelled', counts.cancelled || 0, 'Closed externally']
+        ['Central available', centralCounts.available || 0, 'Orders lifecycle read'],
+        ['Stale/unknown', centralCounts.stale || 0, 'Needs Orders readback'],
+        ['Missing central ID', centralCounts.missingId || 0, 'Forwarding repair needed'],
+        ['Forwarded', counts.forwarded || 0, 'Local forwarding flag'],
+        ['Local failed', counts.failed || 0, 'Heureka-side failure']
       ].map(function (item) {
         return '<article class="dash-metric"><span>' + escapeHtml(item[0]) + '</span><strong>' + escapeHtml(formatNumber(item[1])) + '</strong><p>' + escapeHtml(item[2]) + '</p></article>';
       }).join('');
     }
     if (!body) return;
     body.innerHTML = (data.orders || []).map(function (order) {
-      return '<tr><td>' + escapeHtml(order.externalOrderId || '') + '</td><td>' + escapeHtml(order.orderId || '') + '</td><td>' + escapeHtml(order.customerEmail || order.customerPhone || '') + '</td><td>' + escapeHtml(formatNumber(order.total || 0)) + ' ' + escapeHtml(order.currency || 'CZK') + '</td><td>' + statusChip(order.status) + '</td><td>' + (order.forwarded ? statusChip('forwarded') : statusChip('local')) + '</td><td>' + escapeHtml(formatDate(order.createdAt)) + '</td></tr>';
-    }).join('') || '<tr><td colspan="7">No Heureka orders found</td></tr>';
+      var lifecycle = order.centralLifecycle || {};
+      var lifecycleStatus = lifecycle.status || order.lifecycleStatus || 'unknown';
+      var lifecycleStage = lifecycle.stage && lifecycle.stage !== lifecycleStatus ? lifecycle.stage : '';
+      var missing = (lifecycle.missing || []).join(', ');
+      var lifecycleDetail = [
+        lifecycleStage ? 'Stage: ' + humanize(lifecycleStage) : '',
+        lifecycle.stale ? 'Read model: stale' : '',
+        missing
+      ].filter(Boolean).join(' · ');
+      var centralId = order.orderId || lifecycle.centralOrderId || '';
+      var forwardingState = lifecycle.state === 'missing_id' ? 'missing_id' : (order.forwarded ? 'forwarded' : 'local');
+      return '<tr><td>' + escapeHtml(order.externalOrderId || '') + '</td><td>' + escapeHtml(centralId) + '</td><td>' + escapeHtml(order.customerEmail || order.customerPhone || '') + '</td><td>' + escapeHtml(formatNumber(order.total || 0)) + ' ' + escapeHtml(order.currency || 'CZK') + '</td><td>' + statusChip(lifecycleStatus) + (lifecycleDetail ? '<p class="table-subtext">' + escapeHtml(lifecycleDetail) + '</p>' : '') + '</td><td>' + statusChip(order.localStatus || 'unknown') + '</td><td>' + statusChip(forwardingState) + '</td><td>' + escapeHtml(formatDate(order.createdAt)) + '</td></tr>';
+    }).join('') || '<tr><td colspan="8">No Heureka orders found</td></tr>';
   }
 
   function renderOperationEvents(data) {
@@ -1657,7 +1700,7 @@ td b.danger { background: #ffe8ea; color: var(--red); }
   background: #dcfce7;
   color: #166534;
 }
-.status-needs-data, .status-unverified, .quality-warn {
+.status-needs-data, .status-unverified, .status-unknown, .status-stale, .status-missing-id, .quality-warn {
   background: #fef3c7;
   color: #92400e;
 }

@@ -204,7 +204,7 @@ async function main(): Promise<void> {
   assertIncludes(response.products[1].gaps, 'stock');
   assertEqual(disabledSellerProjection.catalogSource.type, 'community');
   assertEqual(disabledSellerProjection.catalogSource.communityVisible, false);
-  assertEqual(disabledSellerProjection.catalogSource.resaleMutationPath, '[MISSING: local Heureka resale mutation path]');
+  assertEqual(disabledSellerProjection.catalogSource.resaleMutationPath, null);
   assertEqual(disabledSellerProjection.workflowStatus, 'blocked');
   assertEqual(disabledSellerProjection.canIncludeInFeed, false);
   assertIncludes(disabledSellerProjection.gaps, 'catalog_source_resale');
@@ -236,7 +236,8 @@ async function main(): Promise<void> {
   assertEqual(ownProjection.catalogSource.ownedByCurrentUser, true);
   assertEqual(ownProjection.catalogSource.readOnlyCatalogRecord, false);
   assertEqual(ownProjection.catalogSource.resaleEnabled, true);
-  assertEqual(ownProjection.catalogSource.canToggleResaleInHeureka, false);
+  assertEqual(ownProjection.catalogSource.canToggleResaleInHeureka, true);
+  assertEqual(ownProjection.catalogSource.resaleMutationPath, '/heureka/dashboard/products/catalog-product-4/resale');
 
   const communityScopedResponse = await service.listProducts(
     { id: 'user-1', email: 'user@example.test', roles: [] },

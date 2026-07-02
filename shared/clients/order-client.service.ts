@@ -6,6 +6,17 @@ import { LoggerService } from '../logger/logger.service';
 const CREATE_ORDER_CONTRACT_VERSION = 'orders.create.v1';
 const DEFAULT_CHANNEL_ACCOUNT_ID = 'heureka-default';
 export const ORDER_IDEMPOTENCY_CONFLICT = 'ORDER_IDEMPOTENCY_CONFLICT';
+export const ORDER_LIFECYCLE_READ_CONTRACT_MISSING = '[MISSING: Orders lifecycle read contract/client method]';
+
+export type OrderReadResult = {
+  available: boolean;
+  stale: boolean;
+  order: any | null;
+  missing: string[];
+  httpStatus?: number;
+  errorSummary?: string;
+  reason?: string;
+};
 
 interface CreateCentralOrderRequest {
   externalOrderId: string;
@@ -133,6 +144,61 @@ export class OrderClientService {
     }
   }
 
+  async getOrderById(orderId: string): Promise<OrderReadResult> {
+    const normalizedOrderId = orderId?.trim();
+    if (!normalizedOrderId) {
+      return {
+        available: false,
+        stale: true,
+        order: null,
+        missing: ['[MISSING: central Orders id]'],
+        reason: 'missing_order_id',
+      };
+    }
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(this.baseUrl + '/api/orders/' + encodeURIComponent(normalizedOrderId), {
+          headers: this.getAuthHeaders(),
+        }),
+      );
+      const order = response.data?.data ?? response.data ?? null;
+      if (!order || response.data?.success === false) {
+        return {
+          available: false,
+          stale: true,
+          order: null,
+          missing: [ORDER_LIFECYCLE_READ_CONTRACT_MISSING],
+          httpStatus: response.status,
+          reason: 'orders_read_empty_response',
+        };
+      }
+      return {
+        available: true,
+        stale: false,
+        order,
+        missing: [],
+        httpStatus: response.status,
+      };
+    } catch (error: any) {
+      const status = error?.response?.status;
+      const errorSummary = this.getErrorSummary(error);
+      this.logger.warn(
+        'Orders lifecycle read unavailable for order id ' + normalizedOrderId + (status ? ' HTTP ' + status : '') + ': ' + errorSummary,
+        'OrderClient',
+      );
+      return {
+        available: false,
+        stale: true,
+        order: null,
+        missing: [ORDER_LIFECYCLE_READ_CONTRACT_MISSING],
+        httpStatus: status,
+        errorSummary,
+        reason: status ? 'orders_read_http_' + status : 'orders_read_failed',
+      };
+    }
+  }
+
   async findByExternalId(externalOrderId: string, channel: string, channelAccountId?: string): Promise<any | null> {
     try {
       const response = await firstValueFrom(
@@ -151,6 +217,14 @@ export class OrderClientService {
       this.logger.warn('Order not found: ' + externalOrderId, 'OrderClient');
       return null;
     }
+  }
+
+  private getErrorSummary(error: any): string {
+    const responseMessage = error?.response?.data?.message || error?.response?.data?.error;
+    const message = Array.isArray(responseMessage)
+      ? responseMessage.join('; ')
+      : responseMessage || (error instanceof Error ? error.message : 'Unknown error');
+    return String(message || 'Unknown error').replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/g, 'Bearer [REDACTED]').slice(0, 240);
   }
 
   private normalizeChannelAccountId(channelAccountId?: string): string {

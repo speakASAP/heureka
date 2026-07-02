@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import { CatalogClientService, LoggerService, PrismaService, WarehouseClientService } from '@heureka/shared';
+import { CatalogClientService, LoggerService, ORDER_LIFECYCLE_READ_CONTRACT_MISSING, OrderClientService, OrderReadResult, PrismaService, WarehouseClientService } from '@heureka/shared';
 import { buildHeurekaOperationAuditReadModel, ECOSYSTEM_OPERATION_AUDIT_SCHEMA_BLOCKER } from '../operations/operation-event.schema';
 import { FeedService } from '../feed/feed.service';
 import { HeurekaOperationEventService } from '../operations/operation-event.service';
@@ -33,6 +33,30 @@ type CatalogMarketplaceProfileClient = CatalogClientService & {
   updateHeurekaMarketplaceFields?: (productId: string, input: Record<string, unknown>) => Promise<any | null>;
 };
 
+type CentralLifecycleState = 'available' | 'missing_id' | 'stale';
+
+type CentralOrderLifecycle = {
+  contractVersion: 'heureka.central-orders-status-read-model.v1';
+  source: 'orders-microservice';
+  state: CentralLifecycleState;
+  orderId: string | null;
+  centralOrderId: string | null;
+  status: string;
+  stage: string;
+  stale: boolean;
+  forwarded: boolean;
+  localStatus: string | null;
+  readAt: string;
+  updatedAt?: string | null;
+  reservationStatus?: string | null;
+  warehouseHandoffStatus?: string | null;
+  httpStatus?: number;
+  errorSummary?: string;
+  reason?: string;
+  action?: string;
+  missing: string[];
+};
+
 @Injectable()
 export class DashboardService {
   private readonly defaultAdminEmails = ['ssfskype@gmail.com', 'test@example.com'];
@@ -52,6 +76,7 @@ export class DashboardService {
     private readonly httpService: HttpService,
     private readonly logger: LoggerService,
     @Optional() private readonly operationEvents?: HeurekaOperationEventService,
+    @Optional() private readonly orderClient?: OrderClientService,
   ) {
     this.logger.setContext('HeurekaDashboardService');
   }
@@ -240,6 +265,47 @@ export class DashboardService {
     };
   }
 
+  async updateProductResale(user: DashboardUser, productId: string, resaleEnabled: unknown, authorization?: string) {
+    const actor = this.normalizeUser(user);
+    if (typeof resaleEnabled !== 'boolean') {
+      throw new BadRequestException('resaleEnabled must be a boolean');
+    }
+
+    const product = await this.catalogClient.getProductById(productId, { authorization, catalogScope: 'effective' });
+    if (!product) {
+      throw new NotFoundException(`Catalog product ${productId} not found`);
+    }
+
+    const source = this.buildCatalogSourceProjection(product, null, actor, 'effective');
+    if (!source.ownedByCurrentUser) {
+      throw new ForbiddenException('Only the Catalog product owner can change resale sharing from Heureka.');
+    }
+
+    const updated = await this.catalogClient.updateProduct(productId, { resaleEnabled }, { authorization });
+    const productAfterUpdate = { ...product, ...(updated || {}), resaleEnabled };
+    const [pricing, media, includedRow, offer, catalogSettings, stock] = await Promise.all([
+      this.catalogClient.getProductPricing(productId, { authorization }),
+      this.catalogClient.getProductMedia(productId, { authorization }),
+      this.prisma.heurekaProduct.findUnique({ where: { productId } }),
+      this.prisma.heurekaOffer.findFirst({ where: { productId }, orderBy: { updatedAt: 'desc' } }),
+      this.catalogClient.getCatalogSettings({ authorization }),
+      this.warehouseClient.getTotalAvailable(productId),
+    ]);
+
+    return this.buildDashboardProduct(productAfterUpdate, {
+      feedType: 'heureka_cz',
+      includedRow,
+      offer,
+      stock,
+      pricing,
+      media,
+      sourceSettings: catalogSettings,
+      catalogScope: 'effective',
+      sourceFilter: 'effective',
+      actor,
+    });
+  }
+
   async updateListing(user: DashboardUser, productId: string, body: any, authorization?: string) {
     const actor = this.normalizeUser(user);
     const product = await this.catalogClient.getProductById(productId, { authorization, catalogScope: 'effective' });
@@ -357,12 +423,15 @@ export class DashboardService {
       this.prisma.heurekaOrder.count({ where: { status: 'cancelled' } }),
     ]);
 
+    const readModels = await this.serializeOrdersWithCentralLifecycle(orders);
+
     return {
       limit,
       status: status || 'all',
       total,
       statusCounts: { pending, forwarded, failed, cancelled },
-      orders: orders.map((order) => this.serializeOrder(order)),
+      centralStatusCounts: this.countCentralLifecycle(readModels),
+      orders: readModels,
     };
   }
 
@@ -372,7 +441,7 @@ export class DashboardService {
     if (!order) {
       throw new NotFoundException(`Heureka order ${id} not found`);
     }
-    return this.serializeOrder(order);
+    return this.serializeOrderWithCentralLifecycle(order);
   }
 
   async getDashboardFeedStatus(user: DashboardUser, feedType = 'heureka_cz') {
@@ -448,13 +517,16 @@ export class DashboardService {
       this.prisma.heurekaOrder.findMany({ orderBy: { createdAt: 'desc' }, take: 5 }),
     ]);
 
+    const recentOrderReadModels = await this.serializeOrdersWithCentralLifecycle(recentOrders);
+
     return {
       feedType,
       summary,
       feedStatus,
       feedHistory: feedHistory.map((feed) => this.serializeFeed(feed)),
       settings: settings ? this.serializeSettings(settings) : null,
-      recentOrders: recentOrders.map((order) => this.serializeOrder(order)),
+      recentOrders: recentOrderReadModels,
+      centralStatusCounts: this.countCentralLifecycle(recentOrderReadModels),
       runtime: this.getRuntimeStatus(),
       nextActions: this.buildOperationActions(summary, settings),
     };
@@ -1056,6 +1128,7 @@ export class DashboardService {
     });
     const label = rawLabel || this.catalogSourceTypeLabel(type);
     const communityVisible = this.resolveCommunityVisibility(product, resaleEnabled, token, label, type);
+    const productId = this.getCatalogProductId(product);
 
     return {
       authority: 'catalog-microservice',
@@ -1072,8 +1145,8 @@ export class DashboardService {
       readOnlyCatalogRecord: !ownedByCurrentUser,
       resaleEnabled,
       communityVisible,
-      canToggleResaleInHeureka: false,
-      resaleMutationPath: '[MISSING: local Heureka resale mutation path]',
+      canToggleResaleInHeureka: ownedByCurrentUser && Boolean(productId),
+      resaleMutationPath: ownedByCurrentUser && productId ? `/heureka/dashboard/products/${encodeURIComponent(productId)}/resale` : null,
     };
   }
 
@@ -1537,7 +1610,147 @@ export class DashboardService {
     };
   }
 
-  private serializeOrder(order: any) {
+  private async serializeOrdersWithCentralLifecycle(orders: any[]) {
+    return Promise.all((orders || []).map((order) => this.serializeOrderWithCentralLifecycle(order)));
+  }
+
+  private async serializeOrderWithCentralLifecycle(order: any) {
+    const centralLifecycle = await this.getCentralOrderLifecycle(order);
+    return this.serializeOrder(order, centralLifecycle);
+  }
+
+  private async getCentralOrderLifecycle(order: any): Promise<CentralOrderLifecycle> {
+    const orderId = this.optionalString(order?.orderId);
+    if (!orderId) return this.buildMissingCentralOrderIdLifecycle(order);
+
+    if (!this.orderClient?.getOrderById) {
+      return this.buildStaleCentralOrderLifecycle(order, {
+        available: false,
+        stale: true,
+        order: null,
+        missing: [ORDER_LIFECYCLE_READ_CONTRACT_MISSING],
+        reason: 'order_client_unavailable',
+      });
+    }
+
+    const read = await this.orderClient.getOrderById(orderId);
+    if (!read?.available || !read.order) return this.buildStaleCentralOrderLifecycle(order, read);
+    return this.buildAvailableCentralOrderLifecycle(order, read);
+  }
+
+  private buildMissingCentralOrderIdLifecycle(order: any): CentralOrderLifecycle {
+    const forwarded = Boolean(order.forwarded);
+    return {
+      contractVersion: 'heureka.central-orders-status-read-model.v1',
+      source: 'orders-microservice',
+      state: 'missing_id',
+      orderId: null,
+      centralOrderId: null,
+      status: 'unknown',
+      stage: 'missing_order_id',
+      stale: true,
+      forwarded,
+      localStatus: order.status || null,
+      readAt: new Date().toISOString(),
+      missing: ['[MISSING: central Orders id]'],
+      reason: forwarded ? 'forwarded_order_missing_central_order_id' : 'heureka_order_not_forwarded_to_orders',
+      action: forwarded ? 'repair_forwarded_order_id' : 'forward_or_replay_order_to_orders',
+    };
+  }
+
+  private buildStaleCentralOrderLifecycle(order: any, read?: Partial<OrderReadResult> | null): CentralOrderLifecycle {
+    return {
+      contractVersion: 'heureka.central-orders-status-read-model.v1',
+      source: 'orders-microservice',
+      state: 'stale',
+      orderId: order.orderId || null,
+      centralOrderId: order.orderId || null,
+      status: 'unknown',
+      stage: 'stale',
+      stale: true,
+      forwarded: Boolean(order.forwarded),
+      localStatus: order.status || null,
+      readAt: new Date().toISOString(),
+      httpStatus: read?.httpStatus,
+      errorSummary: read?.errorSummary,
+      reason: read?.reason || 'orders_lifecycle_read_unavailable',
+      action: 'retry_orders_lifecycle_read',
+      missing: read?.missing?.length ? read.missing : [ORDER_LIFECYCLE_READ_CONTRACT_MISSING],
+    };
+  }
+
+  private buildAvailableCentralOrderLifecycle(order: any, read: OrderReadResult): CentralOrderLifecycle {
+    const centralOrder = read.order || {};
+    const status = this.optionalString(
+      centralOrder.lifecycleStatus
+      || centralOrder.status
+      || centralOrder.orderStatus
+      || centralOrder.state
+      || centralOrder.currentStatus,
+    ) || 'unknown';
+    const stage = this.optionalString(
+      centralOrder.lifecycleStage
+      || centralOrder.stage
+      || centralOrder.workflowStage
+      || centralOrder.fulfillmentStage
+      || centralOrder.statusStage,
+    ) || status;
+    const reservationStatus = this.optionalString(centralOrder.warehouseHandoff?.status)
+      || this.findNestedString(centralOrder, ['reservationStatus', 'warehouseHandoffStatus', 'handoffStatus']);
+    const missing = status === 'unknown' ? ['[UNKNOWN: central Orders lifecycle status field]'] : [];
+
+    return {
+      contractVersion: 'heureka.central-orders-status-read-model.v1',
+      source: 'orders-microservice',
+      state: 'available',
+      orderId: order.orderId || null,
+      centralOrderId: this.optionalString(centralOrder.id) || order.orderId || null,
+      status,
+      stage,
+      stale: missing.length > 0,
+      forwarded: Boolean(order.forwarded),
+      localStatus: order.status || null,
+      readAt: new Date().toISOString(),
+      updatedAt: this.optionalString(centralOrder.lifecycleUpdatedAt || centralOrder.statusUpdatedAt || centralOrder.updatedAt),
+      reservationStatus,
+      warehouseHandoffStatus: reservationStatus,
+      httpStatus: read.httpStatus,
+      reason: missing.length ? 'orders_read_available_without_lifecycle_status' : 'orders_read_available',
+      action: missing.length ? 'verify_orders_lifecycle_status_contract' : 'monitor_orders_lifecycle',
+      missing,
+    };
+  }
+
+  private countCentralLifecycle(orders: any[]) {
+    return (orders || []).reduce((counts, order) => {
+      const lifecycle = order.centralLifecycle || {};
+      if (lifecycle.state === 'available' && !lifecycle.stale) counts.available += 1;
+      if (lifecycle.state === 'missing_id') counts.missingId += 1;
+      if (lifecycle.stale) counts.stale += 1;
+      if (lifecycle.status === 'unknown') counts.unknown += 1;
+      return counts;
+    }, { available: 0, missingId: 0, stale: 0, unknown: 0 });
+  }
+
+  private findNestedString(value: any, keys: string[], depth = 0): string | null {
+    if (!value || typeof value !== 'object' || depth > 4) return null;
+    const normalizedKeys = keys.map((key) => key.toLowerCase());
+    for (const [key, nested] of Object.entries(value)) {
+      const normalizedKey = key.toLowerCase();
+      if (typeof nested === 'string' && normalizedKeys.includes(normalizedKey)) {
+        return this.optionalString(nested);
+      }
+      if (nested && typeof nested === 'object') {
+        const found = this.findNestedString(nested, keys, depth + 1);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  private serializeOrder(order: any, centralLifecycle?: CentralOrderLifecycle | null) {
+    const localStatus = order.status || null;
+    const lifecycleStatus = centralLifecycle?.status || localStatus || 'unknown';
     return {
       id: order.id,
       accountId: order.accountId,
@@ -1547,7 +1760,11 @@ export class DashboardService {
       customerPhone: order.customerPhone,
       total: this.toNumber(order.total) ?? 0,
       currency: order.currency,
-      status: order.status,
+      status: lifecycleStatus,
+      localStatus,
+      lifecycleStatus,
+      lifecycleStage: centralLifecycle?.stage || null,
+      centralLifecycle: centralLifecycle || null,
       forwarded: Boolean(order.forwarded),
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,

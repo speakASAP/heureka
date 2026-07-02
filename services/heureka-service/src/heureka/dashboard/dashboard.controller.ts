@@ -47,6 +47,11 @@ export class DashboardController {
     return { success: true, data: await this.dashboardService.getProductDetail(req.user, productId, feedType, req.headers.authorization) };
   }
 
+  @Put('products/:productId/resale')
+  async updateProductResale(@Req() req: any, @Param('productId') productId: string, @Body() body: { resaleEnabled?: boolean }) {
+    return { success: true, data: await this.dashboardService.updateProductResale(req.user, productId, body?.resaleEnabled, req.headers.authorization) };
+  }
+
   @Put('products/:productId/listing')
   async updateListing(@Req() req: any, @Param('productId') productId: string, @Body() body: any) {
     return { success: true, data: await this.dashboardService.updateListing(req.user, productId, body || {}, req.headers.authorization) };
