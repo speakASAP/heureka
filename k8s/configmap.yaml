@@ -23,7 +23,7 @@ data:
   WAREHOUSE_SERVICE_URL: "http://warehouse-microservice:3201"
   LOGGING_SERVICE_URL: "http://logging-microservice:3367"
   NOTIFICATION_SERVICE_URL: "http://notifications-microservice:3368"
-  RABBITMQ_URL: "amqp://guest:guest@statex_rabbitmq:5672"
+  RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672"
   CATALOG_EVENTS_EXCHANGE: "catalog.events"
   # Add environment variables from .env that are non-sensitive (no secrets, API keys, passwords)
   # Examples:
