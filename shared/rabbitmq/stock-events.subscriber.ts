@@ -1,11 +1,10 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import * as amqp from 'amqplib';
+import { createHash } from 'crypto';
 import { LoggerService, PrismaService } from '../index';
 
-/**
- * RabbitMQ subscriber for stock events from warehouse-microservice
- * Updates local offer stock quantities when stock changes
- */
+const HEUREKA_EXTERNAL_FEED_BLOCKER = '[MISSING: confirmed Heureka feed approval/import removal behavior]';
+
 @Injectable()
 export class StockEventsSubscriber implements OnModuleInit, OnModuleDestroy {
   private connection: any = null;
@@ -25,14 +24,10 @@ export class StockEventsSubscriber implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy() {
     try {
-      if (this.channel) {
-        await (this.channel as any).close();
-      }
-      if (this.connection) {
-        await this.connection.close();
-      }
-    } catch (error: unknown) {
-      // Ignore errors during cleanup
+      if (this.channel) await (this.channel as any).close();
+      if (this.connection) await this.connection.close();
+    } catch {
+      // Ignore shutdown errors.
     }
   }
 
@@ -41,18 +36,12 @@ export class StockEventsSubscriber implements OnModuleInit, OnModuleDestroy {
       const url = process.env.RABBITMQ_URL || 'amqp://guest:guest@statex_rabbitmq:5672';
       this.logger.log(`Connecting to RabbitMQ: ${url}`, 'StockEventsSubscriber');
 
-      const conn = await amqp.connect(url);
-      this.connection = conn;
+      this.connection = await amqp.connect(url);
       const ch = await this.connection.createChannel();
       this.channel = ch as unknown as amqp.Channel;
 
-      // Assert exchange exists
       await this.channel.assertExchange(this.exchangeName, 'topic', { durable: true });
-
-      // Assert queue exists
       await this.channel.assertQueue(this.queueName, { durable: true });
-
-      // Bind queue to exchange with routing key
       await this.channel.bindQueue(this.queueName, this.exchangeName, 'stock.#');
 
       this.logger.log('Connected to RabbitMQ and subscribed to stock events', 'StockEventsSubscriber');
@@ -74,16 +63,16 @@ export class StockEventsSubscriber implements OnModuleInit, OnModuleDestroy {
 
           try {
             const event = JSON.parse(msg.content.toString());
-            await this.handleStockEvent(event);
+            await this.handleStockEvent({ ...event, routingKey: msg.fields.routingKey || event?.routingKey });
             this.channel?.ack(msg);
           } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             const errorStack = error instanceof Error ? error.stack : undefined;
             this.logger.error(`Error processing stock event: ${errorMessage}`, errorStack, 'StockEventsSubscriber');
-            this.channel?.nack(msg, false, false); // Reject and don't requeue
+            this.channel?.nack(msg, false, false);
           }
         },
-        { noAck: false }
+        { noAck: false },
       );
 
       this.logger.log('Subscribed to stock events queue', 'StockEventsSubscriber');
@@ -94,84 +83,139 @@ export class StockEventsSubscriber implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * Handle stock event from warehouse-microservice
-   */
   private async handleStockEvent(event: any) {
-    const { type, productId, available } = event;
+    const eventType = this.eventType(event);
+    const productId = this.normalizeProductId(event?.productId ?? event?.catalogProductId ?? event?.payload?.productId ?? event?.data?.productId);
 
-    this.logger.log(`Received stock event: ${type} for product ${productId}, available: ${available}`, 'StockEventsSubscriber');
+    if (!productId) {
+      this.logger.warn('Ignoring Warehouse stock event without productId', {
+        eventType,
+        eventId: event?.id || event?.eventId || null,
+      });
+      return;
+    }
 
-    // Update all Allegro offers linked to this product
-    // This would typically update the AllegroOffer.stockQuantity field
-    // and optionally sync to Allegro API if needed
-
-    switch (type) {
+    switch (eventType) {
       case 'stock.updated':
-        // Update offer stock quantities
-        await this.updateOfferStock(productId, available);
-        break;
-      case 'stock.low':
-        // Log warning, optionally send notification
-        this.logger.warn(`Low stock alert for product ${productId}: ${available} available`, 'StockEventsSubscriber');
+        await this.applyWarehouseStockEvent(event, productId, this.normalizeQuantity(event?.available ?? event?.payload?.available ?? event?.data?.available), 'stock.updated');
         break;
       case 'stock.out':
-        // Mark offers as out of stock, update Allegro API
-        await this.handleOutOfStock(productId);
+        await this.applyWarehouseStockEvent(event, productId, 0, 'stock.out');
         break;
+      case 'stock.low':
+        this.logger.warn(`Low stock alert for product ${productId}: ${event?.available} available`, 'StockEventsSubscriber');
+        break;
+      default:
+        this.logger.warn('Ignoring unsupported Warehouse stock event type', { eventType, productId });
     }
   }
 
-  /**
-   * Update product inclusion in feed based on stock
-   * For Heureka, we regenerate the feed when stock changes
-   */
-  private async updateOfferStock(productId: string, available: number) {
-    try {
-      // Update HeurekaProduct inclusion status based on stock
-      const heurekaProduct = await this.prisma.heurekaProduct.findUnique({
+  private async applyWarehouseStockEvent(event: any, productId: string, targetQuantity: number, eventType: 'stock.updated' | 'stock.out') {
+    const eventId = this.eventId(event, eventType, productId, String(targetQuantity));
+    const receivedAt = new Date();
+
+    if (targetQuantity <= 0) {
+      const feedProduct = await this.prisma.heurekaProduct.upsert({
         where: { productId },
+        create: { productId, isIncluded: false },
+        update: { isIncluded: false },
       });
+      const offerUpdate = await this.prisma.heurekaOffer.updateMany({
+        where: { productId },
+        data: { stockQuantity: 0, isActive: false },
+      });
+      await this.appendOperationEvent({
+        eventId,
+        action: 'warehouse_stock_event_applied',
+        status: 'excluded',
+        productId,
+        eventType,
+        idempotencyPrefix: 'warehouse-stock',
+        requestSummary: { targetQuantity, source: 'warehouse-microservice' },
+        responseSummary: { feedProductId: feedProduct?.id || null, offersUpdated: offerUpdate?.count ?? null },
+        blockedReasons: [HEUREKA_EXTERNAL_FEED_BLOCKER],
+        completedAt: receivedAt,
+      });
+      this.logger.log('Heureka zero-stock event excluded product from feed and offers', {
+        eventType,
+        eventId,
+        productId,
+        offersUpdated: offerUpdate?.count ?? null,
+        externalBlocker: HEUREKA_EXTERNAL_FEED_BLOCKER,
+      });
+      return;
+    }
 
-      if (heurekaProduct) {
-        // Update inclusion status: include if stock > 0
-        const shouldInclude = available > 0;
-        if (heurekaProduct.isIncluded !== shouldInclude) {
-          await this.prisma.heurekaProduct.update({
-            where: { id: heurekaProduct.id },
-            data: { isIncluded: shouldInclude },
-          });
+    const offerUpdate = await this.prisma.heurekaOffer.updateMany({
+      where: { productId },
+      data: { stockQuantity: targetQuantity },
+    });
+    this.logger.log('Heureka Warehouse stock cache refreshed without re-including feed product', {
+      eventType,
+      eventId,
+      productId,
+      targetQuantity,
+      offersUpdated: offerUpdate?.count ?? null,
+      refreshPolicy: '[MISSING: safe catalog-event refresh policy]',
+    });
+  }
 
-          this.logger.log(
-            `Updated Heureka product ${productId} inclusion: ${shouldInclude ? 'included' : 'excluded'} (stock: ${available})`,
-            'StockEventsSubscriber'
-          );
-
-          // Trigger feed regeneration (async, don't wait)
-          // This could be done via a queue or scheduled job
-          this.logger.log(`Feed should be regenerated for product ${productId} stock change`, 'StockEventsSubscriber');
-        }
+  private async appendOperationEvent(input: {
+    eventId: string;
+    action: string;
+    status: string;
+    productId: string;
+    eventType: string;
+    idempotencyPrefix: string;
+    requestSummary?: Record<string, any>;
+    responseSummary?: Record<string, any>;
+    blockedReasons?: unknown[];
+    completedAt: Date;
+  }) {
+    const client = (this.prisma as any).heurekaOperationEvent;
+    if (!client) return;
+    try {
+      await client.create({
+        data: {
+          feedType: 'heureka_cz',
+          action: input.action,
+          status: input.status,
+          idempotencyKey: `${input.idempotencyPrefix}:${input.eventId}:${input.productId}`.slice(0, 160),
+          entityType: 'rabbitmq_consumer',
+          entityId: input.eventId.slice(0, 120),
+          productId: input.productId,
+          requestSummary: { eventType: input.eventType, ...(input.requestSummary || {}) },
+          responseSummary: input.responseSummary || {},
+          blockedReasons: input.blockedReasons || [],
+          errorSummary: `${input.eventType} applied for ${input.productId}`,
+          completedAt: input.completedAt,
+        },
+      });
+    } catch (error: any) {
+      if (String(error?.code || '') !== 'P2002') {
+        this.logger.warn(`Heureka stock operation event append failed: ${error?.message || String(error)}`);
       }
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const errorStack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(`Failed to update Heureka product stock: ${errorMessage}`, errorStack, 'StockEventsSubscriber');
     }
   }
 
-  /**
-   * Handle out of stock event
-   */
-  private async handleOutOfStock(productId: string) {
-    try {
-      // Exclude product from feed
-      await this.updateOfferStock(productId, 0);
-      this.logger.warn(`Product ${productId} is out of stock - excluded from feed`, 'StockEventsSubscriber');
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const errorStack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(`Failed to handle out of stock: ${errorMessage}`, errorStack, 'StockEventsSubscriber');
-    }
+  private eventType(event: any): string {
+    return String(event?.type || event?.eventType || event?.routingKey || '').trim();
+  }
+
+  private eventId(event: any, eventType: string, productId: string, value: string): string {
+    const id = String(event?.eventId || event?.id || '').trim();
+    if (id) return id;
+    return `warehouse-stock-${createHash('sha256').update(`${eventType}:${productId}:${value}`).digest('hex').slice(0, 32)}`;
+  }
+
+  private normalizeProductId(value: unknown): string {
+    const productId = String(value || '').trim();
+    return productId || '';
+  }
+
+  private normalizeQuantity(value: unknown): number {
+    const quantity = Number(value);
+    if (!Number.isFinite(quantity) || quantity <= 0) return 0;
+    return Math.floor(quantity);
   }
 }
-

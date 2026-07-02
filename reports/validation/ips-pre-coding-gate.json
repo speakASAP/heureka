@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-07-02T03:50:22Z",
+  "created_at": "2026-07-02T13:20:18Z",
   "execution_plans": {
     "execution_plan_count": 8,
     "execution_plan_files": [
@@ -25,7 +25,7 @@
     "00_constitution/CONSTITUTION.md",
     "01_vision/VISION.md"
   ],
-  "root": "/home/ssf/Documents/Github/heureka-service",
+  "root": "/home/ssf/Documents/Github/heureka",
   "schema_version": "1.0.0",
   "sensitive_data_findings": [],
   "shared_principles_with_dos": {
