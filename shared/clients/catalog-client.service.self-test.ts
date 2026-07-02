@@ -84,6 +84,7 @@ async function main(): Promise<void> {
   assertTruthy(calls[9].url.includes('/api/products/review/quality?'), 'quality review endpoint should be used');
   assertTruthy(calls[9].url.includes('missingField=any'), 'quality review missing field filter should be forwarded');
   assertTruthy(calls[10].url.includes('search=SKU-1'), 'quality review product lookup should search by SKU');
+  assertTruthy(!calls[10].url.includes('isActive=true'), 'quality review product lookup should include inactive/archived products');
   assertEqual(quality.item?.productId, 'product 1');
   assertEqual(quality.item?.blockingIssues?.[0]?.code, 'duplicate_sku');
 

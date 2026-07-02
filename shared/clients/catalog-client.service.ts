@@ -345,7 +345,7 @@ export class CatalogClientService {
     });
 
     for (const term of terms) {
-      const review = await this.getProductQualityReview({ search: term, isActive: true, catalogScope: context.catalogScope, page: 1, limit: 100 }, context);
+      const review = await this.getProductQualityReview({ search: term, catalogScope: context.catalogScope, page: 1, limit: 100 }, context);
       if (review.unavailable) return this.unavailableProductQualityLookup(normalizedProductId, review.blockers);
       const item = this.findProductQualityItem(review.items, normalizedProductId);
       if (item) {
@@ -355,7 +355,7 @@ export class CatalogClientService {
 
     const maxPages = this.clampProductQualityLookupPages(process.env.CATALOG_PRODUCT_QUALITY_LOOKUP_MAX_PAGES);
     for (let page = 1; page <= maxPages; page += 1) {
-      const review = await this.getProductQualityReview({ isActive: true, catalogScope: context.catalogScope, page, limit: 100 }, context);
+      const review = await this.getProductQualityReview({ catalogScope: context.catalogScope, page, limit: 100 }, context);
       if (review.unavailable) return this.unavailableProductQualityLookup(normalizedProductId, review.blockers);
       const item = this.findProductQualityItem(review.items, normalizedProductId);
       if (item) {
