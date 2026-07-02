@@ -4,7 +4,7 @@
 id: VAL-GOAL-25-HEUREKA-PRODUCT-QUALITY-CONSUMER
 status: source-implemented-not-deployed
 created: 2026-07-02
-last_updated: 2026-07-02
+last_updated: 2026-07-03
 repository: /home/ssf/Documents/Github/heureka
 branch: main
 catalog_policy: catalog.product_quality.v1
@@ -66,6 +66,41 @@ LOGGING_SERVICE_URL=http://logging-microservice:3367 npm --prefix services/heure
 - Dashboard product rows, details, bulk readiness preview, readiness lanes, and blocked-lane verifier expose Catalog quality blockers without making Heureka the product-truth owner.
 - EAN remains optional/non-blocking in Heureka dashboard gap logic.
 
+## Refreshed Validation 2026-07-03
+
+Validated remote source commit: `da07f7a fix: include inactive products in catalog quality lookup`.
+
+```bash
+git status --short --branch
+# PASS clean: ## main...origin/main
+
+git diff --check
+# PASS
+
+LOGGING_SERVICE_URL=http://logging-microservice:3367 services/heureka-service/node_modules/.bin/ts-node --skip-ignore --compiler-options '{"experimentalDecorators":true,"emitDecoratorMetadata":true,"types":["node"]}' shared/clients/catalog-client.service.self-test.ts
+# PASS catalog-client auth self-test
+
+services/heureka-service/node_modules/.bin/ts-node --skip-ignore --compiler-options '{"experimentalDecorators":true,"emitDecoratorMetadata":true,"types":["node"]}' services/heureka-service/src/heureka/feed/feed-readiness.self-test.ts
+# PASS feed-readiness self-test
+
+services/heureka-service/node_modules/.bin/ts-node --skip-ignore --compiler-options '{"experimentalDecorators":true,"emitDecoratorMetadata":true,"types":["node"]}' services/heureka-service/src/heureka/feed/feed-preview-readonly.self-test.ts
+# PASS feed-preview-readonly self-test
+
+LOGGING_SERVICE_URL=http://logging-microservice:3367 services/heureka-service/node_modules/.bin/ts-node --skip-ignore --compiler-options '{"experimentalDecorators":true,"emitDecoratorMetadata":true,"types":["node"]}' services/heureka-service/src/heureka/dashboard/dashboard-list-products.self-test.ts
+# PASS dashboard-list-products self-test
+
+node --check scripts/verify_heureka_blocked_product_lanes.js
+# PASS
+
+npm --prefix shared run build
+# PASS tsc
+
+LOGGING_SERVICE_URL=http://logging-microservice:3367 npm --prefix services/heureka-service run build
+# PASS tsc && tsc-alias
+```
+
+Result remains source-implemented and validated, with no deployment run in this worker. The current implementation fails closed when Catalog quality blockers are present or when quality readiness is unavailable before Heureka feed inclusion, feed preview XML exposure, lifecycle feed generation, dashboard product action state, and readiness lane reporting.
+
 ## Blockers And Caveats
 
 - `[UNKNOWN: live deployed Catalog product-quality review route status]`; this source change was not deployed or runtime-smoked against live Catalog/Heureka pods.
@@ -74,5 +109,6 @@ LOGGING_SERVICE_URL=http://logging-microservice:3367 npm --prefix services/heure
 
 ## Commit And Deploy Status
 
-- Commit: not created.
+- Source commits: `761c9a3 feat: consume catalog quality blockers`; `da07f7a fix: include inactive products in catalog quality lookup`.
+- Report refresh: pending this documentation-only commit.
 - Deploy: not run; deploy was explicitly not approved in this worker thread.
