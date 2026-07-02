@@ -1516,7 +1516,38 @@ export class DashboardService {
       status: 'available',
       contentPreview: hasContentPreview ? contentPreview : null,
       marketplaceFields: hasMarketplaceFields ? marketplaceFields : null,
+      manualOverrideSummary: this.summarizeMarketplaceManualOverrides(marketplaceFields),
       missing: [],
+    };
+  }
+
+  private summarizeMarketplaceManualOverrides(marketplaceFields: any) {
+    const fields = Array.isArray(marketplaceFields?.fields) ? marketplaceFields.fields : [];
+    const profileManualOverrides = marketplaceFields?.profile?.manualOverrides && typeof marketplaceFields.profile.manualOverrides === 'object'
+      ? Object.keys(marketplaceFields.profile.manualOverrides)
+      : [];
+    const propagationStaleFields = Array.isArray(marketplaceFields?.propagation?.staleManualFields)
+      ? marketplaceFields.propagation.staleManualFields.map((field: unknown) => String(field)).filter(Boolean)
+      : [];
+    const manualFields = new Set<string>(profileManualOverrides);
+    const staleFields = new Set<string>(propagationStaleFields);
+
+    for (const field of fields) {
+      const key = this.optionalString(field?.key);
+      if (!key) continue;
+      if (field?.manualOverride === true) manualFields.add(key);
+      if (field?.stale === true || field?.requiresManualReview === true) staleFields.add(key);
+    }
+
+    const propagationStatus = this.optionalString(marketplaceFields?.propagation?.status) || 'unknown';
+
+    return {
+      propagationStatus,
+      reviewRequired: propagationStatus === 'manual_review_required' || staleFields.size > 0,
+      manualFieldCount: manualFields.size,
+      staleFieldCount: staleFields.size,
+      manualFields: Array.from(manualFields).sort(),
+      staleFields: Array.from(staleFields).sort(),
     };
   }
 

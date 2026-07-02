@@ -1,3 +1,10 @@
+## 2026-07-02 - Catalog Goal 25 Manual Override Review Signals
+
+- Heureka dashboard now consumes Catalog Goal 25 `marketplace-fields/heureka` manual/stale metadata read-only. Product detail derives `manualOverrideSummary` from the existing Catalog profile response and renders manual override count, source-changed count, and stale field names in the Catalog Heureka preview card.
+- Validation passed: focused `dashboard-list-products.self-test.ts`, `LOGGING_SERVICE_URL=http://logging-microservice:3367 npm --prefix services/heureka-service run build`, and `git diff --check`.
+- Boundary: no Catalog writes, feed generation, publish, queue, confirmation, Warehouse, Orders, Payments, external marketplace mutation, token print, or deployment was run.
+- Next action: deploy Heureka after review, then run protected dashboard product-detail smoke against live Catalog metadata.
+
 # TASK-010: Heureka Sales Channel Parity Checklist
 
 Date: 2026-07-01

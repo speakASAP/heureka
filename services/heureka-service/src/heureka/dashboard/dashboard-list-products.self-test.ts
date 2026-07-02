@@ -67,7 +67,17 @@ async function main(): Promise<void> {
     getHeurekaMarketplaceFields: async (productId: string) => {
       marketplaceCalls.push(productId);
       return productId === 'catalog-product-1'
-        ? { profile: { overrides: { categoryText: 'Elektronika | Marketplace Override' } }, fields: [] }
+        ? {
+            profile: {
+              overrides: { categoryText: 'Elektronika | Marketplace Override' },
+              manualOverrides: { categoryText: { updatedAt: '2026-07-01T00:00:00.000Z' } },
+            },
+            propagation: { status: 'manual_review_required', staleManualFields: ['categoryText'] },
+            fields: [
+              { key: 'categoryText', value: 'Elektronika | Marketplace Override', manualOverride: true, stale: true, requiresManualReview: true },
+              { key: 'deliveryDate', value: 0 },
+            ],
+          }
         : { profile: { overrides: {} }, fields: [] };
     },
     getCatalogSettings: async (context?: any) => {
@@ -182,6 +192,11 @@ async function main(): Promise<void> {
   assertEqual(response.products.length, 2);
   assertEqual(response.products[0].availableStock, 7);
   assertEqual(response.products[0].category, 'Elektronika | Marketplace Override');
+  assertEqual(response.products[0].catalogMarketplaceProfile.manualOverrideSummary.propagationStatus, 'manual_review_required');
+  assertEqual(response.products[0].catalogMarketplaceProfile.manualOverrideSummary.reviewRequired, true);
+  assertEqual(response.products[0].catalogMarketplaceProfile.manualOverrideSummary.manualFieldCount, 1);
+  assertEqual(response.products[0].catalogMarketplaceProfile.manualOverrideSummary.staleFieldCount, 1);
+  assertEqual(response.products[0].catalogMarketplaceProfile.manualOverrideSummary.staleFields.join(','), 'categoryText');
   assertEqual(response.products[0].catalogSource.label, 'Alfares');
   assertEqual(response.products[0].catalogSource.type, 'alfares');
   assertEqual(response.products[0].catalogSource.dashboardProductsUrl, 'https://catalog.alfares.cz/dashboard/products');

@@ -901,13 +901,20 @@ export class PublicController {
     var fields = profile.marketplaceFields || {};
     var previewLabel = preview.contractVersion || preview.version || preview.status || profile.status || 'detail preview';
     var fieldCount = Array.isArray(fields.fields) ? fields.fields.length : 0;
+    var manualSummary = profile.manualOverrideSummary || {};
+    var manualCount = Number(manualSummary.manualFieldCount || 0);
+    var staleCount = Number(manualSummary.staleFieldCount || 0);
+    var staleFields = Array.isArray(manualSummary.staleFields) ? manualSummary.staleFields.join(', ') : '';
+    var marketplaceReview = manualCount || staleCount || manualSummary.reviewRequired
+      ? '<p>Manual overrides: ' + escapeHtml(formatNumber(manualCount)) + '</p><p>Source changed: ' + escapeHtml(formatNumber(staleCount)) + '</p>' + (staleFields ? '<p class="catalog-review-warning">Review: ' + escapeHtml(staleFields) + '</p>' : '')
+      : '<p>Manual overrides: 0</p>';
     var sourcePanel = renderCatalogSourceDetail(product);
     panel.innerHTML = '<div class="listing-head">' +
       (product.primaryImageUrl ? '<img class="product-thumb large" src="' + escapeHtml(product.primaryImageUrl) + '" alt="">' : '<span class="product-thumb large"></span>') +
       '<div><h3>' + escapeHtml(product.name) + '</h3><p>SKU: ' + escapeHtml(product.sku || '') + '</p></div></div>' +
       '<div class="listing-tabs"><button class="active button-reset" type="button">Listing</button><button class="button-reset" type="button">Heureka</button><button class="button-reset" type="button">History</button><button class="button-reset" type="button">Data quality</button></div>' +
       '<div class="workflow-panel"><strong>' + escapeHtml(humanize(product.workflowStatus)) + '</strong><p>Next action: ' + escapeHtml(humanize(product.nextAction)) + '</p><div class="listing-gaps">' + gaps + '</div></div>' +
-      '<div class="catalog-preview"><strong>Catalog Heureka preview</strong><p>Status: ' + escapeHtml(profile.status || 'unknown') + '</p><p>Preview: ' + escapeHtml(previewLabel) + '</p><p>Marketplace fields: ' + escapeHtml(formatNumber(fieldCount)) + '</p></div>' +
+      '<div class="catalog-preview"><strong>Catalog Heureka preview</strong><p>Status: ' + escapeHtml(profile.status || 'unknown') + '</p><p>Preview: ' + escapeHtml(previewLabel) + '</p><p>Marketplace fields: ' + escapeHtml(formatNumber(fieldCount)) + '</p>' + marketplaceReview + '</div>' +
       sourcePanel +
       '<form class="listing-form" id="listing-form">' +
       '<label>Product name<input name="title" value="' + escapeHtml(listing.title || '') + '"></label>' +
@@ -1821,6 +1828,7 @@ td b.danger { background: #ffe8ea; color: var(--red); }
 .operations-timeline, .readiness-lanes { margin-top: 16px; }
 .workflow-panel strong, .catalog-preview strong, .catalog-source-card strong { display: block; margin-bottom: 4px; }
 .workflow-panel p, .catalog-preview p, .catalog-source-card p { margin: 4px 0; color: #64748b; font-size: 12px; }
+.catalog-review-warning { color: #92400e !important; font-weight: 800; }
 .dashboard-notice { border: 1px solid #f59f00; background: #fffbeb; color: #92400e; border-radius: 8px; padding: 12px; }
 .admin-panel { padding-bottom: 16px; }
 .dashboard-products[hidden], .admin-panel[hidden] { display: none !important; }
