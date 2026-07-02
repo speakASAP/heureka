@@ -73,12 +73,19 @@ npm run verify:heureka-stock-readiness-live
 npm run verify:heureka-blocked-product-lanes
 npm run verify:heureka-external-readiness
 npm run verify:health-dependencies
+npm run verify:heureka-owner-data-template
 npm run verify:task-010-completion-audit
 NPM_CONFIG_CACHE=/tmp/heureka-npm-cache npm run verify:task-010-source-parity
 LOGGING_SERVICE_URL=http://logging-microservice:3367 npx ts-node --skip-ignore --compiler-options '{"types":["node"]}' services/api-gateway/src/gateway/gateway-route-parity.self-test.ts
 ```
 
 Use `NPM_CONFIG_CACHE=/tmp/heureka-npm-cache` for root `npm run` commands when `/mnt/docker-data` is full, because the default npm cache on that partition can fail before package scripts start.
+
+## Owner Data Completion
+
+`npm run verify:heureka-owner-data-template` prints the read-only JSON template for the remaining owner inputs: stock decisions, approved image URLs/files, the single Catalog category/price item, and external Heureka approval/import evidence.
+
+Do not treat the template as source authority. Fill it only from Warehouse/current-stock reports, approved public image assets, Catalog pricing/category ownership, and current external Heureka evidence.
 
 ## Secrets
 

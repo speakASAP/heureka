@@ -189,6 +189,7 @@ Remaining blockers:
 Run after any approved data change:
 
 ```bash
+ssh alfares 'cd /home/ssf/Documents/Github/heureka-service && npm run verify:heureka-owner-data-template'
 ssh alfares 'cd /home/ssf/Documents/Github/heureka-service && kubectl -n statex-apps exec deploy/heureka-service -- npm run verify:heureka-blocked-product-lanes'
 ssh alfares 'cd /home/ssf/Documents/Github/heureka-service && npm run verify:heureka-external-readiness'
 ssh alfares 'cd /home/ssf/Documents/Github/heureka-service && curl -k -I https://heureka.alfares.cz/heureka/feed?type=heureka_cz'
@@ -202,6 +203,7 @@ ssh alfares 'kubectl -n statex-apps exec deploy/heureka-service -- node -e "<gen
 
 Success conditions:
 
+- `npm run verify:heureka-owner-data-template` still reports `25` stock decisions, `12` media backfills, `1` Catalog content item, and `5` external Heureka evidence inputs until real owner data is applied.
 - Products approved for sale no longer have `ZERO_STOCK`.
 - Products approved for sale no longer have `MISSING_PRIMARY_IMAGE`.
 - Products not intended for Heureka have explicit owner exclusion decisions.

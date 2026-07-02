@@ -22,6 +22,7 @@ const readme = read('README.md');
 const checklist = read('docs/orchestrator/TASK-010-channel-parity-checklist.md');
 const gapPlan = read('docs/orchestrator/TASK-010-channel-parity-gap-plan.md');
 const handoff = read('docs/orchestrator/TASK-010-data-owner-handoff.md');
+const ownerDataTemplateScript = read('scripts/verify_heureka_owner_data_template.js');
 const publicController = read('services/heureka-service/src/public/public.controller.ts');
 const dashboardController = read('services/heureka-service/src/heureka/dashboard/dashboard.controller.ts');
 const dashboardService = read('services/heureka-service/src/heureka/dashboard/dashboard.service.ts');
@@ -115,6 +116,7 @@ function verifyValidationBundle() {
     'verify:heureka-stock-readiness-live',
     'verify:heureka-blocked-product-lanes',
     'verify:heureka-external-readiness',
+    'verify:heureka-owner-data-template',
     'verify:health-dependencies',
     'verify:task-010-source-parity',
   ]) {
@@ -128,12 +130,15 @@ function verifyValidationBundle() {
     'verify:heureka-order-ingestion',
     'verify:heureka-orders-runtime-readiness',
     'verify:heureka-catalog-token-path',
+    'verify:heureka-owner-data-template',
   ]) {
     assertIncludes(scripts['verify:task-010-source-parity'], expected, 'source parity bundle');
   }
+  assertIncludes(readme, 'verify:heureka-owner-data-template', 'README owner data template command');
   pass('validation-bundle', 'Focused and consolidated non-mutating validation commands exist for the implemented parity surface.', [
     'package.json',
     'README.md',
+    'scripts/verify_heureka_owner_data_template.js',
   ]);
 }
 
@@ -151,9 +156,19 @@ function verifyOwnerDataBlockers() {
   }
   assertIncludes(handoff, '8edc51f2-bed2-433f-8a3c-5738b49a02e1', 'single product content blocker');
   assertIncludes(handoff, 'public Heureka category text, public VAT-inclusive price, primary image, and stock/exclusion decision', 'single product owner input');
+  for (const expected of [
+    'heureka-owner-data-template.v1',
+    'stockDecisions',
+    'mediaBackfill',
+    'catalogContent',
+    'externalHeureka',
+  ]) {
+    assertIncludes(ownerDataTemplateScript, expected, 'owner-data template verifier');
+  }
   ownerBlocked('owner-data-completion', 'Remaining feed/shop completion depends on external owner/data inputs, not additional Heureka code parity.', blockers, [
     'docs/orchestrator/TASK-010-data-owner-handoff.md',
     'docs/orchestrator/TASK-010-channel-parity-checklist.md',
+    'scripts/verify_heureka_owner_data_template.js',
   ]);
 }
 
