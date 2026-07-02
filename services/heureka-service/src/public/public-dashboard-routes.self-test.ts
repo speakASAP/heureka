@@ -35,6 +35,11 @@ async function main(): Promise<void> {
     assertIncludes(String((controller[methodName] as any).call(controller)), 'data-page="dashboard"', `${String(methodName)} page`);
   }
 
+  const landingPage = String(controller.landing());
+  assertIncludes(landingPage, 'Prodávejte vlastní, Alfares i sdílené produkty na Heurece', 'landing sales proposition headline');
+  assertIncludes(landingPage, 'zlevněné produkty od Alfares', 'landing Alfares supplier discount proposition');
+  assertIncludes(landingPage, 'resellujte dostupné produkty dalších uživatelů', 'landing shared catalog resale proposition');
+
   const productsPage = String(controller.dashboardProducts());
   assertIncludes(productsPage, "searchInput.addEventListener('keydown'", 'product search enter binding');
   assertIncludes(productsPage, "event.key === 'Enter'", 'product search enter handling');

@@ -27,6 +27,7 @@ export class DashboardController {
     @Query('feedStatus') feedStatus?: string,
     @Query('workflowStatus') workflowStatus?: string,
     @Query('gap') gap?: string,
+    @Query('source') source?: string,
   ) {
     const result = await this.dashboardService.listProducts(req.user, {
       search,
@@ -36,6 +37,7 @@ export class DashboardController {
       feedStatus,
       workflowStatus,
       gap,
+      source,
     }, req.headers.authorization);
     return { success: true, data: result };
   }

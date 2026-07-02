@@ -77,7 +77,7 @@ export class PublicController {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${title}</title>
-    <meta name="description" content="Alfares Heureka automatizuje publikaci katalogových produktů, ceny, sklad a feed pro Heureka.cz s menším rizikem ručních chyb.">
+    <meta name="description" content="Alfares Heureka pomáhá prodávat vlastní produkty, zlevněné dodavatelské produkty Alfares i sdílený katalog dalších uživatelů přes automatizovaný Heureka feed.">
     <style>${this.styles()}</style>
   </head>
   <body data-page="${page}">
@@ -109,8 +109,8 @@ export class PublicController {
   <section class="hero">
     <div class="hero-inner">
       <div class="hero-copy">
-        <h1>Automatizujte prodej na Heurece bez ručních chyb</h1>
-        <p class="hero-lead">Propojte katalog Alfares s Heurekou a mějte jistotu, že vaše offery, ceny i dostupnost jsou vždy aktuální. Plná automatizace, méně chyb a více času na růst.</p>
+        <h1>Prodávejte vlastní, Alfares i sdílené produkty na Heurece</h1>
+        <p class="hero-lead">Vyberte si zlevněné produkty od Alfares a firemních dodavatelů, publikujte vlastní sortiment a resellujte dostupné produkty dalších uživatelů ze sdíleného katalogu. Alfares automatizuje feed, listingy, marketplace data, objednávky a platby tam, kde to Heureka a napojené systémy dovolí.</p>
         <div class="hero-actions">
           <a class="primary-button" href="/register">Registrovat přes Alfares ${this.icon('external')}</a>
           <a class="secondary-button" href="/login">Přihlásit se ${this.icon('arrow-right')}</a>
@@ -191,31 +191,31 @@ export class PublicController {
   <section id="automation" class="process-section">
     <div class="section-title centered">
       <h2>Plně automatizovaný proces</h2>
-      <p>Od katalogu Alfares k viditelnosti na Heurece bez zásahu operátora.</p>
+      <p>Alfares připraví technickou část prodeje; zákazník spravuje produkty, připojí marketplace přístup, prodává a odesílá zboží.</p>
     </div>
     <div class="process-rail">
       <article>
         <span class="process-icon">${this.icon('database')}</span>
-        <h3>1. Katalog Alfares</h3>
-        <p>Produkty, ceny, sklad a parametry ze systému Alfares.</p>
+        <h3>1. Zdroje produktů</h3>
+        <p>Vlastní sortiment, zlevněné Alfares/dodavatelské produkty a sdílený katalog ostatních uživatelů.</p>
       </article>
       <span class="rail-arrow">${this.icon('arrow-right')}</span>
       <article>
         <span class="process-icon red">${this.icon('upload')}</span>
-        <h3>2. Zpracování a validace</h3>
-        <p>Automatické mapování, kontrola dat a validace podle pravidel Heureky.</p>
+        <h3>2. Listing a validace</h3>
+        <p>Automatické naplnění marketplace účtu, mapování kategorií, kontrola dat a pravidla Heureky.</p>
       </article>
       <span class="rail-arrow">${this.icon('arrow-right')}</span>
       <article>
         <span class="process-icon red">${this.icon('refresh')}</span>
-        <h3>3. Synchronizace</h3>
-        <p>Automatické odesílání změn cen, skladů a dostupnosti v reálném čase.</p>
+        <h3>3. Objednávky a platby</h3>
+        <p>Automatizace objednávek, plateb a stavů tam, kde to napojený kanál a účet podporuje.</p>
       </article>
       <span class="rail-arrow">${this.icon('arrow-right')}</span>
       <article>
         <span class="process-icon orange">${this.icon('search-check')}</span>
-        <h3>4. Heureka</h3>
-        <p>Vaše nabídka je vždy aktuální, přesná a konkurenceschopná.</p>
+        <h3>4. Prodej a expedice</h3>
+        <p>Zákazník řídí nabídku, prodává pod svým účtem a zajišťuje odeslání zboží.</p>
       </article>
     </div>
   </section>
@@ -223,13 +223,13 @@ export class PublicController {
   <section id="control" class="control-section">
     <div class="control-copy">
       <h2>Plná kontrola nad vaší nabídkou</h2>
-      <p>Mějte přehled o každé změně, stavech feedů a kvalitě dat na jednom místě. Reagujte rychle a s jistotou.</p>
+      <p>Mějte přehled o vlastních produktech, Alfares sortimentu, sdíleném resale katalogu, stavech feedů a kvalitě dat na jednom místě. Reagujte rychle a s jistotou.</p>
       <ul class="check-list">
-        <li>${this.icon('check-circle')} Přehled o synchronizacích cen, skladů a dostupnosti</li>
+        <li>${this.icon('check-circle')} Přehled o vlastních, Alfares a sdílených produktech pro resale</li>
         <li>${this.icon('check-circle')} Fronta aktualizací a historie změn</li>
         <li>${this.icon('check-circle')} Validace feedu a upozornění na chyby</li>
         <li>${this.icon('check-circle')} Detailní logy a auditní stopa</li>
-        <li>${this.icon('check-circle')} Nastavení pravidel a mapování kategorií</li>
+        <li>${this.icon('check-circle')} Nastavení pravidel, marketplace přístupu a mapování kategorií</li>
       </ul>
       <a class="secondary-button explore-button" href="/dashboard">Prozkoumat kontrolní panel ${this.icon('arrow-right')}</a>
     </div>
@@ -254,10 +254,10 @@ export class PublicController {
   <section class="benefits-section">
     <h2>Rychlejší aktualizace. Méně chyb. Lepší výsledky.</h2>
     <div class="benefit-grid">
-      <article>${this.icon('rocket')}<div><h3>Rychlejší uvedení nabídek</h3><p>Nové produkty a změny se na Heurece objeví rychleji díky automatizaci.</p></div></article>
+      <article>${this.icon('rocket')}<div><h3>Rychlejší uvedení nabídek</h3><p>Nové vlastní, Alfares i sdílené produkty se na Heurece objeví rychleji díky automatizaci.</p></div></article>
       <article>${this.icon('shield')}<div><h3>Méně lidských chyb</h3><p>Validace a pravidla minimalizují chyby v datech a zamítnutí nabídek.</p></div></article>
       <article>${this.icon('refresh')}<div><h3>Vždy aktuální data</h3><p>Ceny, sklad i dostupnost jsou synchronizované v reálném čase.</p></div></article>
-      <article>${this.icon('chart')}<div><h3>Vyšší výkon na Heurece</h3><p>Přesná data zlepšují viditelnost, konverze a spokojenost zákazníků.</p></div></article>
+      <article>${this.icon('chart')}<div><h3>Větší prodejní dosah</h3><p>Jeden účet může prodávat vlastní zboží, zlevněný Alfares sortiment i dostupné produkty sdíleného katalogu.</p></div></article>
     </div>
   </section>
 
@@ -290,7 +290,7 @@ export class PublicController {
 
 <footer class="footer">
   <div class="footer-inner">
-    <div><h2>Alfares Heureka</h2><p>Automatizovaný prodejní kanál pro publikaci vašeho katalogu na Heurece. Plná kontrola, žádné ruční chyby.</p></div>
+    <div><h2>Alfares Heureka</h2><p>Automatizovaný prodejní kanál pro vlastní produkty, Alfares dodavatelské zboží a sdílený resale katalog na Heurece. Plná kontrola, žádné ruční chyby.</p></div>
     <nav><h3>Produkt</h3><a href="#automation">Automatizace</a><a href="#control">Kontrola</a><a href="#registration">Integrace</a></nav>
     <nav><h3>O službě</h3><a href="#automation">Jak to funguje</a><a href="/login">Bezpečnost</a><a href="/login">Podpora</a></nav>
     <nav><h3>Právní informace</h3><a href="/login">Podmínky služby</a><a href="/login">Ochrana osobních údajů</a></nav>
@@ -378,12 +378,23 @@ export class PublicController {
               <p id="products-count">Loading products</p>
             </div>
             <div class="products-toolbar-actions">
+              <a class="secondary-button light catalog-link" href="https://catalog.alfares.cz/dashboard/products" target="_blank" rel="noreferrer">Catalog Dashboard ${this.icon('external')}</a>
+              <a class="secondary-button light catalog-link" href="https://catalog.alfares.cz/dashboard/products/new" target="_blank" rel="noreferrer">New product ${this.icon('external')}</a>
               <button class="secondary-button light button-reset" id="regenerate-feed" type="button">${this.icon('refresh')} Regenerate feed</button>
-              <button class="primary-button button-reset" type="button">Edit listing</button>
+              <a class="primary-button catalog-link" href="https://catalog.alfares.cz/dashboard/settings" target="_blank" rel="noreferrer">Source settings ${this.icon('external')}</a>
+            </div>
+          </div>
+          <div class="catalog-source-strip" id="catalog-source-strip">
+            <div><strong>Catalog source</strong><span id="catalog-source-copy">Own, Alfares and community products from Catalog effective access.</span></div>
+            <div class="catalog-source-actions">
+              <a href="https://catalog.alfares.cz/dashboard/products" target="_blank" rel="noreferrer">Manage products</a>
+              <a href="https://catalog.alfares.cz/dashboard/products/new" target="_blank" rel="noreferrer">Create product</a>
+              <a href="https://catalog.alfares.cz/dashboard/settings" target="_blank" rel="noreferrer">Source settings</a>
             </div>
           </div>
           <div class="products-filter">
             <input id="products-search" type="search" placeholder="Search by name, SKU, EAN">
+            <select id="products-source-filter" aria-label="Catalog source"><option value="">All Catalog sources</option><option value="own">My products</option><option value="alfares">Alfares products</option><option value="community">Community resale</option></select>
             <select id="products-gap-filter" aria-label="Data gap"><option value="">All data states</option><option value="missing_category">Missing category</option><option value="has_category">Has category</option><option value="image">Missing image</option><option value="stock">Zero stock</option></select>
             <select id="products-feed-status" aria-label="Feed status"><option value="">All feed statuses</option><option value="included">Included</option><option value="excluded">Excluded</option></select>
             <select id="products-workflow-status" aria-label="Workflow status"><option value="">All workflow statuses</option><option value="ready">Ready</option><option value="draft">Draft</option><option value="included">Included</option><option value="blocked">Blocked</option></select>
@@ -397,6 +408,7 @@ export class PublicController {
                   <th></th>
                   <th>Product</th>
                   <th>SKU</th>
+                  <th>Source</th>
                   <th>Heureka status</th>
                   <th>Feed status</th>
                   <th>Data quality</th>
@@ -514,6 +526,9 @@ export class PublicController {
   var STATE_KEY = 'heurekaHostedAuthState';
   var RETURN_KEY = 'heurekaHostedAuthReturnTo';
   var FALLBACK_RETURN = '/dashboard';
+  var CATALOG_PRODUCTS_URL = 'https://catalog.alfares.cz/dashboard/products';
+  var CATALOG_CREATE_URL = 'https://catalog.alfares.cz/dashboard/products/new';
+  var CATALOG_SETTINGS_URL = 'https://catalog.alfares.cz/dashboard/settings';
 
   function safeReturnTo(value) {
     if (!value || typeof value !== 'string') return FALLBACK_RETURN;
@@ -738,17 +753,64 @@ export class PublicController {
     }).join('');
   }
 
-  function renderProducts(products, pagination) {
+  function catalogSourceLabel(source) {
+    var type = source && source.type ? source.type : 'unknown';
+    if (type === 'own') return 'My product';
+    if (type === 'alfares') return 'Alfares';
+    if (type === 'community') return 'Community';
+    return (source && source.label) || 'Catalog';
+  }
+
+  function catalogResaleLabel(source) {
+    if (!source) return 'Source managed in Catalog';
+    if (source.resaleEnabled === true) return 'Shared for resale';
+    if (source.resaleEnabled === false) return source.type === 'own' ? 'Private in Catalog' : 'Not shared for resale';
+    return 'Resale managed in Catalog';
+  }
+
+  function catalogSourceChip(source) {
+    var type = source && source.type ? source.type : 'unknown';
+    return '<span class="source-chip source-' + escapeHtml(type) + '">' + escapeHtml(catalogSourceLabel(source)) + '</span>';
+  }
+
+  function renderCatalogSourceControls(data) {
+    var copy = document.getElementById('catalog-source-copy');
+    var selected = data && data.catalogSourceFilter ? data.catalogSourceFilter : 'effective';
+    var options = Array.isArray(data && data.sourceOptions) ? data.sourceOptions : [];
+    var selectedOption = options.filter(function (option) { return option.value === selected; })[0] || options[0];
+    if (copy) {
+      copy.textContent = selectedOption && selectedOption.copy ? selectedOption.copy : 'Own, Alfares and community products from Catalog effective access.';
+    }
+  }
+
+  function renderCatalogSourceDetail(product) {
+    var source = product.catalogSource || {};
+    var readOnlyCopy = source.readOnlyCatalogRecord ? 'Catalog product record is read-only in Heureka; edit only the Heureka listing here.' : 'Owner Catalog product; product data and resale sharing are managed in Catalog Dashboard.';
+    return '<div class="catalog-source-card"><strong>Catalog source</strong>' +
+      '<p>' + catalogSourceChip(source) + ' ' + escapeHtml(source.label || catalogSourceLabel(source)) + '</p>' +
+      '<p>Resale: ' + escapeHtml(catalogResaleLabel(source)) + '</p>' +
+      '<p>' + escapeHtml(readOnlyCopy) + '</p>' +
+      '<div class="catalog-source-actions">' +
+        '<a href="' + escapeHtml(CATALOG_PRODUCTS_URL) + '" target="_blank" rel="noreferrer">Manage products</a>' +
+        '<a href="' + escapeHtml(CATALOG_CREATE_URL) + '" target="_blank" rel="noreferrer">Create product</a>' +
+        '<a href="' + escapeHtml(CATALOG_SETTINGS_URL) + '" target="_blank" rel="noreferrer">Resale settings</a>' +
+      '</div></div>';
+  }
+
+  function renderProducts(products, pagination, catalogData) {
+    renderCatalogSourceControls(catalogData || {});
     var body = document.getElementById('products-table-body');
     var count = document.getElementById('products-count');
     if (!body) return;
     if (count) count.textContent = formatNumber((pagination && pagination.filtered) || products.length) + ' shown / ' + formatNumber((pagination && pagination.total) || products.length) + ' products';
     body.innerHTML = products.map(function (product) {
       var image = product.primaryImageUrl ? '<img class="product-thumb" src="' + escapeHtml(product.primaryImageUrl) + '" alt="">' : '<span class="product-thumb"></span>';
+      var source = product.catalogSource || {};
       return '<tr data-product-id="' + escapeHtml(product.id) + '">' +
         '<td><input type="checkbox" data-select-product="' + escapeHtml(product.id) + '" aria-label="Select product"></td>' +
         '<td><div class="product-cell">' + image + '<div><strong>' + escapeHtml(product.name) + '</strong><p>' + escapeHtml(product.brand || product.category || 'Catalog product') + '</p></div></div></td>' +
         '<td>' + escapeHtml(product.sku || '') + '</td>' +
+        '<td>' + catalogSourceChip(source) + '<p class="table-subtext">' + escapeHtml(catalogResaleLabel(source)) + '</p></td>' +
         '<td>' + statusChip(product.workflowStatus || product.heurekaStatus) + '<p class="table-subtext">Next: ' + escapeHtml(humanize(product.nextAction)) + '</p></td>' +
         '<td>' + statusChip(product.feedStatus) + '</td>' +
         '<td><span class="feed-pill ' + qualityClass(product.dataQuality) + '">' + escapeHtml(product.dataQuality) + '%</span></td>' +
@@ -832,12 +894,14 @@ export class PublicController {
     var fields = profile.marketplaceFields || {};
     var previewLabel = preview.contractVersion || preview.version || preview.status || profile.status || 'detail preview';
     var fieldCount = Array.isArray(fields.fields) ? fields.fields.length : 0;
+    var sourcePanel = renderCatalogSourceDetail(product);
     panel.innerHTML = '<div class="listing-head">' +
       (product.primaryImageUrl ? '<img class="product-thumb large" src="' + escapeHtml(product.primaryImageUrl) + '" alt="">' : '<span class="product-thumb large"></span>') +
       '<div><h3>' + escapeHtml(product.name) + '</h3><p>SKU: ' + escapeHtml(product.sku || '') + '</p></div></div>' +
       '<div class="listing-tabs"><button class="active button-reset" type="button">Listing</button><button class="button-reset" type="button">Heureka</button><button class="button-reset" type="button">History</button><button class="button-reset" type="button">Data quality</button></div>' +
       '<div class="workflow-panel"><strong>' + escapeHtml(humanize(product.workflowStatus)) + '</strong><p>Next action: ' + escapeHtml(humanize(product.nextAction)) + '</p><div class="listing-gaps">' + gaps + '</div></div>' +
       '<div class="catalog-preview"><strong>Catalog Heureka preview</strong><p>Status: ' + escapeHtml(profile.status || 'unknown') + '</p><p>Preview: ' + escapeHtml(previewLabel) + '</p><p>Marketplace fields: ' + escapeHtml(formatNumber(fieldCount)) + '</p></div>' +
+      sourcePanel +
       '<form class="listing-form" id="listing-form">' +
       '<label>Product name<input name="title" value="' + escapeHtml(listing.title || '') + '"></label>' +
       '<label>Heureka category<input name="category" value="' + escapeHtml(listing.category || product.category || '') + '"></label>' +
@@ -1074,11 +1138,13 @@ export class PublicController {
 
   function loadDashboardData() {
     var search = document.getElementById('products-search');
+    var source = document.getElementById('products-source-filter');
     var feedStatus = document.getElementById('products-feed-status');
     var workflowStatus = document.getElementById('products-workflow-status');
     var gap = document.getElementById('products-gap-filter');
     var params = new URLSearchParams({ limit: '20' });
     if (search && search.value.trim()) params.set('search', search.value.trim());
+    if (source && source.value) params.set('source', source.value);
     if (feedStatus && feedStatus.value) params.set('feedStatus', feedStatus.value);
     if (workflowStatus && workflowStatus.value) params.set('workflowStatus', workflowStatus.value);
     if (gap && gap.value) params.set('gap', gap.value);
@@ -1087,7 +1153,7 @@ export class PublicController {
       api('/heureka/dashboard/catalog-products?' + params.toString())
     ]).then(function (results) {
       renderMetrics(results[0].data);
-      renderProducts(results[1].data.products || [], results[1].data.pagination || {});
+      renderProducts(results[1].data.products || [], results[1].data.pagination || {}, results[1].data || {});
     }).catch(showDashboardError);
   }
 
@@ -1126,7 +1192,7 @@ export class PublicController {
     }
     var bulkPreview = document.getElementById('bulk-readiness-preview');
     if (bulkPreview) bulkPreview.addEventListener('click', previewSelectedReadiness);
-    ['products-feed-status', 'products-workflow-status', 'products-gap-filter'].forEach(function (id) {
+    ['products-source-filter', 'products-feed-status', 'products-workflow-status', 'products-gap-filter'].forEach(function (id) {
       var filter = document.getElementById(id);
       if (filter) filter.addEventListener('change', loadDashboardData);
     });
@@ -1644,10 +1710,24 @@ td b.danger { background: #ffe8ea; color: var(--red); }
 .products-toolbar h2 { font-size: 18px; margin-bottom: 4px; }
 .products-toolbar p { margin: 0; color: #64748b; }
 .products-toolbar-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
-.products-toolbar-actions .secondary-button svg { width: 16px; height: 16px; margin-right: 7px; vertical-align: -3px; }
+.products-toolbar-actions .button-reset svg { width: 16px; height: 16px; margin-right: 7px; vertical-align: -3px; }
+.products-toolbar-actions .catalog-link svg { width: 16px; height: 16px; margin-left: 7px; vertical-align: -3px; }
+.catalog-source-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 18px 14px;
+  color: #475569;
+  flex-wrap: wrap;
+}
+.catalog-source-strip strong { display: block; color: var(--ink); font-size: 13px; margin-bottom: 3px; }
+.catalog-source-strip span { font-size: 12px; }
+.catalog-source-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.catalog-source-actions a { color: #007c8c; font-size: 12px; font-weight: 850; text-decoration: none; }
 .products-filter {
   display: grid;
-  grid-template-columns: minmax(220px, 1.5fr) repeat(3, minmax(130px, 0.7fr)) auto;
+  grid-template-columns: minmax(220px, 1.4fr) repeat(4, minmax(130px, 0.7fr)) auto;
   gap: 12px;
   padding: 0 18px 14px;
 }
@@ -1662,7 +1742,7 @@ td b.danger { background: #ffe8ea; color: var(--red); }
 .bulk-row { min-height: 42px; display: flex; align-items: center; gap: 14px; padding: 8px 18px; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; color: #475569; font-size: 12px; flex-wrap: wrap; }
 #bulk-readiness-summary { color: #334155; font-weight: 750; }
 .table-scroll { overflow-x: auto; }
-.dashboard-table { width: 100%; border-collapse: collapse; min-width: 820px; }
+.dashboard-table { width: 100%; border-collapse: collapse; min-width: 940px; }
 .dashboard-table th, .dashboard-table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: middle; }
 .dashboard-table th { color: #64748b; background: #f8fafc; font-size: 11px; font-weight: 900; }
 .product-cell { display: flex; align-items: center; gap: 10px; min-width: 240px; }
@@ -1670,6 +1750,10 @@ td b.danger { background: #ffe8ea; color: var(--red); }
 .product-thumb { width: 34px; height: 34px; border-radius: 3px; background: #e5edf2; border: 1px solid #d9e0e7; object-fit: cover; flex: 0 0 auto; }
 .product-thumb.large { width: 54px; height: 54px; }
 .table-action { border: 0; background: transparent; color: #334155; font-size: 22px; font-weight: 900; cursor: pointer; }
+.source-chip { display: inline-flex; align-items: center; min-height: 24px; padding: 3px 8px; border-radius: 999px; background: #eef6f8; color: #0f6b78; font-size: 11px; font-weight: 900; white-space: nowrap; }
+.source-own { background: #e8f8ec; color: #146c2e; }
+.source-alfares { background: #e6f7f8; color: #007c8c; }
+.source-community { background: #fff4df; color: #a45603; }
 .listing-panel { min-height: 620px; padding: 18px; border-left: 1px solid #d9e0e7; }
 .listing-head { display: flex; gap: 12px; align-items: center; padding-bottom: 16px; }
 .listing-head h3 { margin-bottom: 4px; font-size: 16px; }
@@ -1684,18 +1768,18 @@ td b.danger { background: #ffe8ea; color: var(--red); }
 .check-row { display: flex !important; flex-direction: row; align-items: center; justify-content: space-between; color: var(--ink) !important; }
 .check-row input { width: 22px; height: 22px; }
 .listing-gaps { display: flex; flex-wrap: wrap; gap: 8px; }
-.workflow-panel, .catalog-preview { border: 1px solid #d9e0e7; border-radius: 4px; padding: 12px; margin-bottom: 12px; background: #f8fafc; }
+.workflow-panel, .catalog-preview, .catalog-source-card { border: 1px solid #d9e0e7; border-radius: 4px; padding: 12px; margin-bottom: 12px; background: #f8fafc; }
 .operations-timeline, .readiness-lanes { margin-top: 16px; }
-.workflow-panel strong, .catalog-preview strong { display: block; margin-bottom: 4px; }
-.workflow-panel p, .catalog-preview p { margin: 4px 0; color: #64748b; font-size: 12px; }
+.workflow-panel strong, .catalog-preview strong, .catalog-source-card strong { display: block; margin-bottom: 4px; }
+.workflow-panel p, .catalog-preview p, .catalog-source-card p { margin: 4px 0; color: #64748b; font-size: 12px; }
 .dashboard-notice { border: 1px solid #f59f00; background: #fffbeb; color: #92400e; border-radius: 8px; padding: 12px; }
 .admin-panel { padding-bottom: 16px; }
 .dashboard-products[hidden], .admin-panel[hidden] { display: none !important; }
 @media (max-width: 1380px) {
   .dashboard-products { grid-template-columns: minmax(0, 1fr) 380px; }
   .products-toolbar-actions .primary-button { display: none; }
-  .products-filter { grid-template-columns: minmax(220px, 1fr) minmax(150px, .7fr) minmax(150px, .7fr); }
-  .products-filter select:nth-of-type(3) { display: none; }
+  .products-filter { grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(150px, .7fr)); }
+  .products-filter select:nth-of-type(4) { display: none; }
 }
 @media (max-width: 1100px) {
   .header-inner { grid-template-columns: 1fr; justify-items: start; padding: 16px 24px; }

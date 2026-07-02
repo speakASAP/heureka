@@ -175,11 +175,17 @@ async function main(): Promise<void> {
   assertEqual(mediaCalls.join(','), 'catalog-product-1:Bearer human-token,catalog-product-2:Bearer human-token');
   assertEqual(marketplaceCalls.join(','), 'catalog-product-1,catalog-product-2');
   assertEqual(response.catalogScope, 'effective');
+  assertEqual(response.catalogSourceFilter, 'effective');
   assertEqual(response.catalogSettingsAuthority.settingsEndpoint, '/api/catalog/settings');
+  assertEqual(response.catalogSettingsAuthority.dashboardCreateUrl, 'https://catalog.alfares.cz/dashboard/products/new');
+  assertEqual(response.sourceOptions.length, 4);
   assertEqual(response.products.length, 2);
   assertEqual(response.products[0].availableStock, 7);
   assertEqual(response.products[0].category, 'Elektronika | Marketplace Override');
   assertEqual(response.products[0].catalogSource.label, 'Alfares');
+  assertEqual(response.products[0].catalogSource.type, 'alfares');
+  assertEqual(response.products[0].catalogSource.dashboardProductsUrl, 'https://catalog.alfares.cz/dashboard/products');
+  assertEqual(response.products[0].catalogSource.canToggleResaleInHeureka, false);
   assertEqual(response.products[0].catalogSource.communityVisible, true);
   assertEqual(response.products[0].heurekaStatus, 'published');
   assertEqual(response.products[0].workflowStatus, 'included');
@@ -187,6 +193,7 @@ async function main(): Promise<void> {
   assertEqual(response.products[0].canConfirmPublish, false);
   assertEqual(response.products[0].gaps.includes('category'), false);
   assertEqual(response.products[1].catalogSource.label, 'Test Seller');
+  assertEqual(response.products[1].catalogSource.type, 'community');
   assertEqual(response.products[1].catalogSource.resaleEnabled, true);
   assertEqual(response.products[1].catalogSource.communityVisible, true);
   assertEqual(response.products[1].availableStock, 0);
@@ -195,11 +202,51 @@ async function main(): Promise<void> {
   assertEqual(response.products[1].nextAction, 'resolve_data_gaps');
   assertEqual(response.products[1].canIncludeInFeed, false);
   assertIncludes(response.products[1].gaps, 'stock');
+  assertEqual(disabledSellerProjection.catalogSource.type, 'community');
   assertEqual(disabledSellerProjection.catalogSource.communityVisible, false);
+  assertEqual(disabledSellerProjection.catalogSource.resaleMutationPath, '[MISSING: local Heureka resale mutation path]');
   assertEqual(disabledSellerProjection.workflowStatus, 'blocked');
   assertEqual(disabledSellerProjection.canIncludeInFeed, false);
   assertIncludes(disabledSellerProjection.gaps, 'catalog_source_resale');
   assertEqual(response.products[1].blockers[0].code, 'STOCK');
+
+  const ownProjection = (service as any).buildDashboardProduct(
+    {
+      id: 'catalog-product-4',
+      sku: 'SKU-4',
+      title: 'Owned Catalog Product',
+      description: 'Complete public description',
+      ean: '8590000000042',
+      brand: 'Owner Brand',
+      categoryText: 'Elektronika | Test',
+      ownerUserId: 'user-1',
+      resaleEnabled: true,
+      updatedAt: '2026-07-01T00:00:00.000Z',
+    },
+    {
+      stock: 5,
+      pricing: { priceVat: '399.00' },
+      media: [{ id: 'media-owned', url: 'https://example.test/owned.jpg', isPrimary: true }],
+      sourceSettings: {},
+      catalogScope: 'effective',
+      actor: { id: 'user-1', email: 'user@example.test', roles: [] },
+    },
+  );
+  assertEqual(ownProjection.catalogSource.type, 'own');
+  assertEqual(ownProjection.catalogSource.ownedByCurrentUser, true);
+  assertEqual(ownProjection.catalogSource.readOnlyCatalogRecord, false);
+  assertEqual(ownProjection.catalogSource.resaleEnabled, true);
+  assertEqual(ownProjection.catalogSource.canToggleResaleInHeureka, false);
+
+  const communityScopedResponse = await service.listProducts(
+    { id: 'user-1', email: 'user@example.test', roles: [] },
+    { page: 1, limit: 20, feedType: 'heureka_cz', source: 'community' },
+    'Bearer human-token',
+  );
+  assertEqual(searchQueries[1].query.catalogScope, 'community');
+  assertEqual(communityScopedResponse.catalogScope, 'community');
+  assertEqual(communityScopedResponse.catalogSourceFilter, 'community');
+  assertEqual(communityScopedResponse.filters.source, 'community');
 
   const blockedResponse = await service.listProducts(
     { id: 'user-1', email: 'user@example.test', roles: [] },
@@ -216,7 +263,7 @@ async function main(): Promise<void> {
     'Bearer human-token',
   );
   assertEqual(readinessBatchCalls, 1);
-  assertEqual(searchQueries[2].context.authorization, 'Bearer human-token');
+  assertEqual(searchQueries[3].context.authorization, 'Bearer human-token');
   assertEqual(lastReadinessBatchIds.join(','), 'catalog-product-1,catalog-product-2');
   assertEqual(lanes.readiness.summary.ready, 1);
   assertEqual(lanes.readiness.summary.blocked, 1);
@@ -259,10 +306,12 @@ async function main(): Promise<void> {
     'excluded',
     'blocked',
     'stock',
+    'community',
   );
   assertEqual(controllerQuery.feedStatus, 'excluded');
   assertEqual(controllerQuery.workflowStatus, 'blocked');
   assertEqual(controllerQuery.gap, 'stock');
+  assertEqual(controllerQuery.source, 'community');
   assertEqual(controllerListAuthorization, 'Bearer human-token');
   await controller.readinessLanes(
     { user: { id: 'user-1', email: 'user@example.test', roles: [] }, headers: { authorization: 'Bearer human-token' } } as any,

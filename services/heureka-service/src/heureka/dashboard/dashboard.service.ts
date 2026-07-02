@@ -22,7 +22,10 @@ type ProductListQuery = {
   feedStatus?: string;
   workflowStatus?: string;
   gap?: string;
+  source?: string;
 };
+
+type CatalogSourceFilter = 'effective' | 'own' | 'alfares' | 'community';
 
 type CatalogMarketplaceProfileClient = CatalogClientService & {
   getHeurekaContentPreview?: (productId: string) => Promise<any | null>;
@@ -98,7 +101,7 @@ export class DashboardService {
   }
 
   async listProducts(user: DashboardUser, query: ProductListQuery, authorization?: string) {
-    this.normalizeUser(user);
+    const actor = this.normalizeUser(user);
     const page = this.clampNumber(query.page, 1, 1, 10000);
     const limit = this.clampNumber(query.limit, 20, 1, 50);
     const search = String(query.search || '').trim().slice(0, 120);
@@ -106,8 +109,10 @@ export class DashboardService {
     const feedStatus = this.optionalString(query.feedStatus);
     const workflowStatus = this.optionalString(query.workflowStatus);
     const gap = this.optionalString(query.gap);
+    const source = this.normalizeCatalogSourceFilter(query.source);
+    const catalogScope = this.catalogScopeForSourceFilter(source);
     const [catalog, catalogSettings] = await Promise.all([
-      this.catalogClient.searchProducts({ search, isActive: true, catalogScope: 'effective', page, limit }, { authorization }),
+      this.catalogClient.searchProducts({ search, isActive: true, catalogScope, page, limit }, { authorization }),
       this.catalogClient.getCatalogSettings({ authorization }),
     ]);
     const items = Array.isArray(catalog.items) ? catalog.items : [];
@@ -149,7 +154,9 @@ export class DashboardService {
         media,
         marketplaceFields,
         sourceSettings: catalogSettings,
-        catalogScope: 'effective',
+        catalogScope,
+        sourceFilter: source,
+        actor,
       });
     }));
 
@@ -157,19 +164,25 @@ export class DashboardService {
 
     return {
       feedType,
-      catalogScope: 'effective',
+      catalogScope,
+      catalogSourceFilter: source,
       catalogSettingsAuthority: {
         source: 'catalog-microservice',
         settingsEndpoint: '/api/catalog/settings',
         accessProvisionEndpoint: '/api/catalog/access/provision',
+        dashboardProductsUrl: 'https://catalog.alfares.cz/dashboard/products',
+        dashboardCreateUrl: 'https://catalog.alfares.cz/dashboard/products/new',
+        dashboardSettingsUrl: 'https://catalog.alfares.cz/dashboard/settings',
         settingsAvailable: Boolean(catalogSettings),
       },
+      sourceOptions: this.buildCatalogSourceOptions(source, catalogSettings),
       products: filteredProducts,
       filters: {
         search,
         feedStatus,
         workflowStatus,
         gap,
+        source,
         pageSize: products.length,
         returned: filteredProducts.length,
       },
@@ -183,7 +196,7 @@ export class DashboardService {
   }
 
   async getProductDetail(user: DashboardUser, productId: string, feedType = 'heureka_cz', authorization?: string) {
-    this.normalizeUser(user);
+    const actor = this.normalizeUser(user);
     const product = await this.catalogClient.getProductById(productId, { authorization, catalogScope: 'effective' });
     if (!product) {
       throw new NotFoundException(`Catalog product ${productId} not found`);
@@ -210,6 +223,8 @@ export class DashboardService {
       media,
       sourceSettings: catalogSettings,
       catalogScope: 'effective',
+      sourceFilter: 'effective',
+      actor,
     });
     const previewPlainText = this.resolvePreviewPlainText(contentPreview);
     const listing = this.buildListing(product, offer, pricing, stock, previewPlainText, marketplaceFields);
@@ -977,7 +992,7 @@ export class DashboardService {
     const marketplaceOverrides = this.resolveMarketplaceOverrides(context.marketplaceFields);
     const category = marketplaceOverrides.categoryText || product.categoryText || product.categoryPath || product.categoryName || product.category || null;
     const name = offer?.title || marketplaceOverrides.productName || product.title || product.name || product.productName || 'Untitled product';
-    const catalogSource = this.buildCatalogSourceProjection(product, context.sourceSettings);
+    const catalogSource = this.buildCatalogSourceProjection(product, context.sourceSettings, context.actor, context.catalogScope);
     const gaps = this.getProductGaps(product, pricing, media, stock, null, category);
     if (catalogSource.communityVisible === false) gaps.push('catalog_source_resale');
     const quality = this.calculateQuality(gaps);
@@ -1021,27 +1036,44 @@ export class DashboardService {
     };
   }
 
-  private buildCatalogSourceProjection(product: any, sourceSettings: any) {
+  private buildCatalogSourceProjection(product: any, sourceSettings: any, actor?: DashboardUser, requestedScope?: string) {
     const token = this.optionalString(
       product.catalogSourceToken || product.sourceToken || product.sellerToken || product.ownerToken ||
       product.source?.token || product.seller?.token || product.owner?.token,
     );
-    const label = this.optionalString(
+    const rawLabel = this.optionalString(
       product.catalogSourceLabel || product.sourceLabel || product.sellerName || product.ownerName ||
       product.source?.label || product.source?.name || product.seller?.name || product.owner?.name,
-    ) || (this.isAlfaresProductSource(product) ? 'Alfares' : null);
+    );
     const resaleEnabled = this.resolveResaleEnabled(product);
-    const communityVisible = this.resolveCommunityVisibility(product, resaleEnabled, token, label);
+    const ownedByCurrentUser = this.isCurrentUsersCatalogProduct(product, actor);
+    const type = this.resolveCatalogSourceType(product, {
+      token,
+      label: rawLabel,
+      resaleEnabled,
+      ownedByCurrentUser,
+      requestedScope,
+    });
+    const label = rawLabel || this.catalogSourceTypeLabel(type);
+    const communityVisible = this.resolveCommunityVisibility(product, resaleEnabled, token, label, type);
 
     return {
       authority: 'catalog-microservice',
       settingsEndpoint: '/api/catalog/settings',
       accessProvisionEndpoint: '/api/catalog/access/provision',
+      dashboardProductsUrl: 'https://catalog.alfares.cz/dashboard/products',
+      dashboardCreateUrl: 'https://catalog.alfares.cz/dashboard/products/new',
+      dashboardSettingsUrl: 'https://catalog.alfares.cz/dashboard/settings',
       settingsAvailable: Boolean(sourceSettings),
       token,
       label,
+      type,
+      ownedByCurrentUser,
+      readOnlyCatalogRecord: !ownedByCurrentUser,
       resaleEnabled,
       communityVisible,
+      canToggleResaleInHeureka: false,
+      resaleMutationPath: '[MISSING: local Heureka resale mutation path]',
     };
   }
 
@@ -1059,8 +1091,10 @@ export class DashboardService {
     return null;
   }
 
-  private resolveCommunityVisibility(product: any, resaleEnabled: boolean | null, token: string | null, label: string | null): boolean | null {
-    if (this.isAlfaresProductSource(product, token, label)) return resaleEnabled === false ? false : true;
+  private resolveCommunityVisibility(product: any, resaleEnabled: boolean | null, token: string | null, label: string | null, sourceType?: string): boolean | null {
+    if (sourceType === 'alfares' || this.isAlfaresProductSource(product, token, label)) return resaleEnabled === false ? false : true;
+    if (sourceType === 'own') return resaleEnabled === true;
+    if (sourceType === 'community') return resaleEnabled === false ? false : true;
     if (token || label) return resaleEnabled === true;
     return resaleEnabled === false ? false : null;
   }
@@ -1083,6 +1117,111 @@ export class DashboardService {
       product.source?.name,
     ];
     return sourceValues.some((value) => String(value || '').toLowerCase().includes('alfares'));
+  }
+
+  private normalizeCatalogSourceFilter(value?: string | null): CatalogSourceFilter {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized === 'own' || normalized === 'alfares' || normalized === 'community') return normalized;
+    return 'effective';
+  }
+
+  private catalogScopeForSourceFilter(source: CatalogSourceFilter): CatalogSourceFilter {
+    return source;
+  }
+
+  private buildCatalogSourceOptions(selected: CatalogSourceFilter, sourceSettings: any) {
+    const settingsAvailable = Boolean(sourceSettings);
+    return [
+      {
+        value: 'effective',
+        catalogScope: 'effective',
+        label: 'All enabled Catalog sources',
+        copy: 'Own, Alfares and community products enabled in Catalog settings.',
+        selected: selected === 'effective',
+        settingsAvailable,
+      },
+      {
+        value: 'own',
+        catalogScope: 'own',
+        label: 'My Catalog products',
+        copy: 'Products owned by the signed-in Auth user.',
+        selected: selected === 'own',
+        settingsAvailable,
+      },
+      {
+        value: 'alfares',
+        catalogScope: 'alfares',
+        label: 'Alfares products',
+        copy: 'Company Catalog products available to the account.',
+        selected: selected === 'alfares',
+        settingsAvailable,
+      },
+      {
+        value: 'community',
+        catalogScope: 'community',
+        label: 'Community resale products',
+        copy: 'Products other owners shared for resale through Catalog.',
+        selected: selected === 'community',
+        settingsAvailable,
+      },
+    ];
+  }
+
+  private resolveCatalogSourceType(product: any, context: { token: string | null; label: string | null; resaleEnabled: boolean | null; ownedByCurrentUser: boolean; requestedScope?: string | null }): CatalogSourceFilter | 'unknown' {
+    const requestedScope = this.normalizeCatalogSourceFilter(context.requestedScope);
+    if (requestedScope === 'own' || context.ownedByCurrentUser) return 'own';
+    if (requestedScope === 'alfares' || this.isAlfaresProductSource(product, context.token, context.label)) return 'alfares';
+    if (requestedScope === 'community') return 'community';
+
+    const sourceValues = [
+      product.catalogSource,
+      product.sourceType,
+      product.sourceKind,
+      product.ownerType,
+      product.source?.type,
+      product.source?.kind,
+      product.source?.visibility,
+      product.resale?.visibility,
+    ].map((value) => String(value || '').toLowerCase());
+
+    if (sourceValues.some((value) => value.includes('alfares') || value.includes('company'))) return 'alfares';
+    if (sourceValues.some((value) => value.includes('own') || value.includes('private'))) return 'own';
+    if (sourceValues.some((value) => value.includes('community') || value.includes('resale') || value.includes('shared'))) return 'community';
+    if ((context.token || context.label) && context.resaleEnabled !== null) return 'community';
+    return 'unknown';
+  }
+
+  private catalogSourceTypeLabel(type: CatalogSourceFilter | 'unknown') {
+    if (type === 'own') return 'My Catalog product';
+    if (type === 'alfares') return 'Alfares';
+    if (type === 'community') return 'Community resale';
+    return 'Catalog source';
+  }
+
+  private isCurrentUsersCatalogProduct(product: any, actor?: DashboardUser): boolean {
+    if (!actor) return false;
+    const actorValues = [actor.id, actor.email].map((value) => String(value || '').trim().toLowerCase()).filter(Boolean);
+    if (!actorValues.length) return false;
+    const ownerValues = [
+      product.ownerUserId,
+      product.owner_user_id,
+      product.userId,
+      product.user_id,
+      product.createdByUserId,
+      product.created_by_user_id,
+      product.createdBy,
+      product.owner?.id,
+      product.owner?.userId,
+      product.owner?.user_id,
+      product.owner?.email,
+      product.seller?.userId,
+      product.seller?.email,
+      product.source?.ownerUserId,
+      product.source?.owner_user_id,
+      product.source?.userId,
+      product.source?.email,
+    ].map((value) => String(value || '').trim().toLowerCase()).filter(Boolean);
+    return ownerValues.some((value) => actorValues.includes(value));
   }
 
   private buildProductWorkflowProjection(context: { gaps: string[]; isIncluded: boolean; hasOffer: boolean }) {
