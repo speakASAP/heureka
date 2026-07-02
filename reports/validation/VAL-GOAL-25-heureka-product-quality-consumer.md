@@ -110,5 +110,5 @@ Result remains source-implemented and validated, with no deployment run in this 
 ## Commit And Deploy Status
 
 - Source commits: `761c9a3 feat: consume catalog quality blockers`; `da07f7a fix: include inactive products in catalog quality lookup`.
-- Report refresh: pending this documentation-only commit.
+- Report refresh: documented by this validation-report refresh commit.
 - Deploy: not run; deploy was explicitly not approved in this worker thread.
