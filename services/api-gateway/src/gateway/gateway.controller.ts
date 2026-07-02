@@ -138,6 +138,20 @@ export class GatewayController {
     return this.routeOptionalServiceRequest('settings', 'SETTINGS_SERVICE_URL or HEUREKA_SETTINGS_SERVICE_PORT', `/settings${path}`, req, res);
   }
 
+  @All('catalog/*')
+  @UseGuards(JwtAuthGuard)
+  async catalogRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
+    const path = req.url.replace('/api/catalog', '');
+    return this.routeRequest('catalog', `/api/catalog${path}`, req, res);
+  }
+
+  @All('catalog')
+  @UseGuards(JwtAuthGuard)
+  async catalogBaseRoute(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
+    const path = req.url.replace('/api/catalog', '') || '';
+    return this.routeRequest('catalog', `/api/catalog${path}`, req, res);
+  }
+
   /**
    * Health check endpoint at /api/health
    */
@@ -457,7 +471,7 @@ export class GatewayController {
   }
 
   private getAvailableEndpointMessage(): string {
-    const endpoints = ['/api/auth/*', '/api/heureka/*'];
+    const endpoints = ['/api/auth/*', '/api/heureka/*', '/api/catalog/*'];
     if (this.gatewayService.isServiceConfigured('import')) endpoints.push('/api/import/*');
     if (this.gatewayService.isServiceConfigured('settings')) endpoints.push('/api/settings/*');
     const optional = [

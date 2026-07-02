@@ -562,6 +562,29 @@ export class PublicController {
     }
   }
 
+  function provisionCatalogAccess(accessToken) {
+    return window.fetch('/api/catalog/access/provision', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        Authorization: 'Bearer ' + accessToken
+      },
+      body: JSON.stringify({ sourceApplication: AUTH_CLIENT_ID })
+    }).then(function (response) {
+      return response.text().then(function (rawText) {
+        var payload = rawText ? JSON.parse(rawText) : {};
+        if (!response.ok || payload.success === false) {
+          throw new Error((payload.error && payload.error.message) || payload.message || 'Catalog provisioning failed: ' + response.status);
+        }
+        window.localStorage.removeItem('heurekaCatalogProvisionWarning');
+        return payload;
+      });
+    }).catch(function (error) {
+      window.localStorage.setItem('heurekaCatalogProvisionWarning', text(error.message || error));
+      return null;
+    });
+  }
+
   function handleCallback() {
     var status = document.getElementById('callback-status');
     var actions = document.getElementById('callback-actions');
@@ -594,8 +617,11 @@ export class PublicController {
     window.localStorage.removeItem(STATE_KEY);
     var returnTo = safeReturnTo(window.localStorage.getItem(RETURN_KEY) || FALLBACK_RETURN);
     window.localStorage.removeItem(RETURN_KEY);
-    window.history.replaceState(null, document.title, AUTH_CALLBACK_PATH);
-    window.location.replace(returnTo);
+    if (status) status.textContent = 'Připravujeme váš katalogový prostor.';
+    provisionCatalogAccess(accessToken).then(function () {
+      window.history.replaceState(null, document.title, AUTH_CALLBACK_PATH);
+      window.location.replace(returnTo);
+    });
   }
 
   function api(path, options) {

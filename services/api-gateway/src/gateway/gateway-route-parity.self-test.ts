@@ -162,6 +162,67 @@ async function main(): Promise<void> {
   assertEqual(capturedBody?.error?.code, 'SERVICE_NOT_CONFIGURED', 'optional route code');
   assertEqual(capturedBody?.error?.serviceName, 'settings', 'optional route serviceName');
 
+  let catalogForwardCall: any = null;
+  capturedStatus = 0;
+  capturedBody = null;
+  const catalogController = new GatewayController(
+    {
+      isServiceConfigured: (serviceName: string) => serviceName === 'catalog',
+      forwardRequest: async (serviceName: string, path: string, method: string, body: any, headers: any) => {
+        catalogForwardCall = { serviceName, path, method, body, headers };
+        return {
+          _isGatewayResponse: true,
+          _gatewayStatus: 200,
+          data: { success: true, data: { provisioned: true } },
+        };
+      },
+    } as any,
+    {
+      setContext: () => undefined,
+      info: () => undefined,
+      warn: () => undefined,
+      error: () => undefined,
+    } as any,
+    {
+      getDependencyHealthStatus: async () => ({
+        contractVersion: 'heureka.dependency-health.v1',
+        status: 'ok',
+        service: 'api-gateway',
+        readOnly: true,
+        mutations: [],
+        dependencies: {},
+      }),
+    } as any,
+  );
+  await catalogController.catalogRoute(
+    {
+      method: 'POST',
+      body: { sourceApplication: 'heureka-service' },
+      headers: { authorization: 'Bearer human-token' },
+      originalUrl: '/api/catalog/access/provision',
+      url: '/api/catalog/access/provision',
+      ip: '127.0.0.1',
+      socket: { remoteAddress: '127.0.0.1' },
+      get: () => 'self-test',
+    } as any,
+    {
+      status: (status: number) => {
+        capturedStatus = status;
+        return {
+          json: (body: any) => {
+            capturedBody = body;
+            return undefined;
+          },
+        };
+      },
+    } as any,
+  );
+  assertEqual(catalogForwardCall?.serviceName, 'catalog', 'catalog route service');
+  assertEqual(catalogForwardCall?.path, '/api/catalog/access/provision', 'catalog route path');
+  assertEqual(catalogForwardCall?.headers?.Authorization, 'Bearer human-token', 'catalog route auth header');
+  assertEqual(capturedStatus, 200, 'catalog route status');
+  assertEqual(capturedBody?.data?.provisioned, true, 'catalog route body');
+
   console.log('PASS gateway-route-parity self-test');
 }
 

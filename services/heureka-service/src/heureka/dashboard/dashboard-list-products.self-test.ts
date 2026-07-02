@@ -21,9 +21,13 @@ async function main(): Promise<void> {
   const pricingCalls: string[] = [];
   const mediaCalls: string[] = [];
   const marketplaceCalls: string[] = [];
+  const searchQueries: any[] = [];
+  const catalogSettingsAuthorizations: Array<string | undefined> = [];
 
   const catalogClient = {
-    searchProducts: async () => ({
+    searchProducts: async (query: any, context?: any) => {
+      searchQueries.push({ query, context });
+      return {
       items: [
         {
           id: 'catalog-product-1',
@@ -32,6 +36,7 @@ async function main(): Promise<void> {
           description: 'Complete public description',
           ean: '8590000000011',
           brand: 'Alfares',
+          catalogSourceLabel: 'Alfares',
           updatedAt: '2026-07-01T00:00:00.000Z',
         },
         {
@@ -41,6 +46,7 @@ async function main(): Promise<void> {
           description: 'Complete public description',
           ean: '8590000000028',
           brand: 'Alfares',
+          source: { token: 'seller:test', label: 'Test Seller', resaleEnabled: true },
           categoryText: 'Elektronika | Test',
           updatedAt: '2026-07-01T00:00:00.000Z',
         },
@@ -48,13 +54,14 @@ async function main(): Promise<void> {
       total: 2,
       page: 1,
       limit: 20,
-    }),
-    getProductPricing: async (productId: string) => {
-      pricingCalls.push(productId);
+    };
+    },
+    getProductPricing: async (productId: string, context?: any) => {
+      pricingCalls.push(`${productId}:${context?.authorization || ''}`);
       return { priceVat: '199.00' };
     },
-    getProductMedia: async (productId: string) => {
-      mediaCalls.push(productId);
+    getProductMedia: async (productId: string, context?: any) => {
+      mediaCalls.push(`${productId}:${context?.authorization || ''}`);
       return [{ id: `media-${productId}`, url: `https://example.test/${productId}.jpg`, isPrimary: true }];
     },
     getHeurekaMarketplaceFields: async (productId: string) => {
@@ -62,6 +69,10 @@ async function main(): Promise<void> {
       return productId === 'catalog-product-1'
         ? { profile: { overrides: { categoryText: 'Elektronika | Marketplace Override' } }, fields: [] }
         : { profile: { overrides: {} }, fields: [] };
+    },
+    getCatalogSettings: async (context?: any) => {
+      catalogSettingsAuthorizations.push(context?.authorization);
+      return { sources: [{ token: 'alfares', label: 'Alfares', defaultEnabled: true }] };
     },
   };
 
@@ -132,32 +143,68 @@ async function main(): Promise<void> {
   const response = await service.listProducts(
     { id: 'user-1', email: 'user@example.test', roles: [] },
     { page: 1, limit: 20, feedType: 'heureka_cz' },
+    'Bearer human-token',
+  );
+  const disabledSellerProjection = (service as any).buildDashboardProduct(
+    {
+      id: 'catalog-product-3',
+      sku: 'SKU-3',
+      title: 'Disabled Seller Product',
+      description: 'Complete public description',
+      ean: '8590000000035',
+      brand: 'Seller Brand',
+      categoryText: 'Elektronika | Test',
+      source: { token: 'seller:disabled', label: 'Disabled Seller', resaleEnabled: false },
+      updatedAt: '2026-07-01T00:00:00.000Z',
+    },
+    {
+      stock: 5,
+      pricing: { priceVat: '299.00' },
+      media: [{ id: 'media-disabled', url: 'https://example.test/disabled.jpg', isPrimary: true }],
+      sourceSettings: {},
+      catalogScope: 'effective',
+    },
   );
 
+  assertEqual(searchQueries[0].query.catalogScope, 'effective');
+  assertEqual(searchQueries[0].context.authorization, 'Bearer human-token');
+  assertEqual(catalogSettingsAuthorizations[0], 'Bearer human-token');
   assertEqual(stockBatchCalls, 1);
   assertEqual(lastStockBatchIds.join(','), 'catalog-product-1,catalog-product-2');
-  assertEqual(pricingCalls.join(','), 'catalog-product-1,catalog-product-2');
-  assertEqual(mediaCalls.join(','), 'catalog-product-1,catalog-product-2');
+  assertEqual(pricingCalls.join(','), 'catalog-product-1:Bearer human-token,catalog-product-2:Bearer human-token');
+  assertEqual(mediaCalls.join(','), 'catalog-product-1:Bearer human-token,catalog-product-2:Bearer human-token');
   assertEqual(marketplaceCalls.join(','), 'catalog-product-1,catalog-product-2');
+  assertEqual(response.catalogScope, 'effective');
+  assertEqual(response.catalogSettingsAuthority.settingsEndpoint, '/api/catalog/settings');
   assertEqual(response.products.length, 2);
   assertEqual(response.products[0].availableStock, 7);
   assertEqual(response.products[0].category, 'Elektronika | Marketplace Override');
+  assertEqual(response.products[0].catalogSource.label, 'Alfares');
+  assertEqual(response.products[0].catalogSource.communityVisible, true);
   assertEqual(response.products[0].heurekaStatus, 'published');
   assertEqual(response.products[0].workflowStatus, 'included');
   assertEqual(response.products[0].nextAction, 'monitor_feed');
   assertEqual(response.products[0].canConfirmPublish, false);
   assertEqual(response.products[0].gaps.includes('category'), false);
+  assertEqual(response.products[1].catalogSource.label, 'Test Seller');
+  assertEqual(response.products[1].catalogSource.resaleEnabled, true);
+  assertEqual(response.products[1].catalogSource.communityVisible, true);
   assertEqual(response.products[1].availableStock, 0);
   assertEqual(response.products[1].heurekaStatus, 'not_published');
   assertEqual(response.products[1].workflowStatus, 'blocked');
   assertEqual(response.products[1].nextAction, 'resolve_data_gaps');
   assertEqual(response.products[1].canIncludeInFeed, false);
   assertIncludes(response.products[1].gaps, 'stock');
+  assertEqual(disabledSellerProjection.catalogSource.communityVisible, false);
+  assertEqual(disabledSellerProjection.workflowStatus, 'blocked');
+  assertEqual(disabledSellerProjection.canIncludeInFeed, false);
+  assertIncludes(disabledSellerProjection.gaps, 'catalog_source_resale');
   assertEqual(response.products[1].blockers[0].code, 'STOCK');
 
   const blockedResponse = await service.listProducts(
     { id: 'user-1', email: 'user@example.test', roles: [] },
     { page: 1, limit: 20, feedType: 'heureka_cz', workflowStatus: 'blocked' },
+    'Bearer human-token',
   );
   assertEqual(blockedResponse.products.length, 1);
   assertEqual(blockedResponse.products[0].id, 'catalog-product-2');
@@ -166,8 +213,10 @@ async function main(): Promise<void> {
   const lanes = await service.getReadinessLanes(
     { id: 'user-1', email: 'user@example.test', roles: [] },
     'heureka_cz',
+    'Bearer human-token',
   );
   assertEqual(readinessBatchCalls, 1);
+  assertEqual(searchQueries[2].context.authorization, 'Bearer human-token');
   assertEqual(lastReadinessBatchIds.join(','), 'catalog-product-1,catalog-product-2');
   assertEqual(lanes.readiness.summary.ready, 1);
   assertEqual(lanes.readiness.summary.blocked, 1);
@@ -184,18 +233,25 @@ async function main(): Promise<void> {
 
   let controllerQuery: any = null;
   let controllerReadinessFeedType: string | null = null;
+  let controllerListAuthorization: string | undefined;
+  let controllerIncludeAuthorization: string | undefined;
   const controller = new DashboardController({
-    listProducts: async (_user: any, query: any) => {
+    listProducts: async (_user: any, query: any, authorization?: string) => {
       controllerQuery = query;
+      controllerListAuthorization = authorization;
       return { products: [], total: 0, filters: query };
     },
     getReadinessLanes: async (_user: any, feedType: string) => {
       controllerReadinessFeedType = feedType;
       return { feedType, lanes: {} };
     },
+    setProductIncluded: async (_user: any, _productId: string, _include: boolean, authorization?: string) => {
+      controllerIncludeAuthorization = authorization;
+      return { ok: true };
+    },
   } as any);
   await controller.products(
-    { user: { id: 'user-1', email: 'user@example.test', roles: [] } } as any,
+    { user: { id: 'user-1', email: 'user@example.test', roles: [] }, headers: { authorization: 'Bearer human-token' } } as any,
     '',
     '1',
     '20',
@@ -207,11 +263,18 @@ async function main(): Promise<void> {
   assertEqual(controllerQuery.feedStatus, 'excluded');
   assertEqual(controllerQuery.workflowStatus, 'blocked');
   assertEqual(controllerQuery.gap, 'stock');
+  assertEqual(controllerListAuthorization, 'Bearer human-token');
   await controller.readinessLanes(
-    { user: { id: 'user-1', email: 'user@example.test', roles: [] } } as any,
+    { user: { id: 'user-1', email: 'user@example.test', roles: [] }, headers: { authorization: 'Bearer human-token' } } as any,
     'heureka_sk',
   );
   assertEqual(controllerReadinessFeedType, 'heureka_sk');
+  await controller.includeProduct(
+    { user: { id: 'user-1', email: 'user@example.test', roles: [] }, headers: { authorization: 'Bearer human-token' } } as any,
+    'catalog-product-1',
+    { include: true },
+  );
+  assertEqual(controllerIncludeAuthorization, 'Bearer human-token');
 
   console.log('PASS dashboard-list-products self-test');
 }

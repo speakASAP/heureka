@@ -40,6 +40,9 @@ async function main(): Promise<void> {
   assertIncludes(productsPage, "event.key === 'Enter'", 'product search enter handling');
   assertIncludes(productsPage, "searchInput.addEventListener('input', scheduleDashboardSearch)", 'product search input debounce binding');
   assertIncludes(productsPage, "params.set('search', search.value.trim())", 'product search query parameter');
+  assertIncludes(productsPage, "window.fetch('/api/catalog/access/provision'", 'catalog access provisioning endpoint');
+  assertIncludes(productsPage, "body: JSON.stringify({ sourceApplication: AUTH_CLIENT_ID })", 'catalog provisioning source application');
+  assertIncludes(productsPage, "Připravujeme váš katalogový prostor.", 'catalog provisioning callback status');
 
   console.log('PASS public-dashboard-routes self-test');
 }

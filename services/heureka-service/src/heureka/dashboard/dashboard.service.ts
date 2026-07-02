@@ -69,10 +69,10 @@ export class DashboardService {
     };
   }
 
-  async getSummary(user: DashboardUser, feedType = 'heureka_cz') {
+  async getSummary(user: DashboardUser, feedType = 'heureka_cz', authorization?: string) {
     this.normalizeUser(user);
     const [catalog, includedCount, linkedCount, offerCount, orderCount, latestFeed, settings] = await Promise.all([
-      this.catalogClient.searchProducts({ isActive: true, page: 1, limit: 1 }),
+      this.catalogClient.searchProducts({ isActive: true, catalogScope: 'effective', page: 1, limit: 1 }, { authorization }),
       this.prisma.heurekaProduct.count({ where: { isIncluded: true } }),
       this.prisma.heurekaProduct.count(),
       this.prisma.heurekaOffer.count({ where: { isActive: true } }),
@@ -97,7 +97,7 @@ export class DashboardService {
     };
   }
 
-  async listProducts(user: DashboardUser, query: ProductListQuery) {
+  async listProducts(user: DashboardUser, query: ProductListQuery, authorization?: string) {
     this.normalizeUser(user);
     const page = this.clampNumber(query.page, 1, 1, 10000);
     const limit = this.clampNumber(query.limit, 20, 1, 50);
@@ -106,7 +106,10 @@ export class DashboardService {
     const feedStatus = this.optionalString(query.feedStatus);
     const workflowStatus = this.optionalString(query.workflowStatus);
     const gap = this.optionalString(query.gap);
-    const catalog = await this.catalogClient.searchProducts({ search, isActive: true, page, limit });
+    const [catalog, catalogSettings] = await Promise.all([
+      this.catalogClient.searchProducts({ search, isActive: true, catalogScope: 'effective', page, limit }, { authorization }),
+      this.catalogClient.getCatalogSettings({ authorization }),
+    ]);
     const items = Array.isArray(catalog.items) ? catalog.items : [];
     const productIds = items.map((product) => this.getCatalogProductId(product)).filter(Boolean);
 
@@ -132,8 +135,8 @@ export class DashboardService {
       const productId = this.getCatalogProductId(product);
       const [pricing, media, marketplaceFields] = productId
         ? await Promise.all([
-            this.catalogClient.getProductPricing(productId),
-            this.catalogClient.getProductMedia(productId),
+            this.catalogClient.getProductPricing(productId, { authorization }),
+            this.catalogClient.getProductMedia(productId, { authorization }),
             this.getHeurekaMarketplaceFields(productId),
           ])
         : [null, [], null];
@@ -145,6 +148,8 @@ export class DashboardService {
         pricing,
         media,
         marketplaceFields,
+        sourceSettings: catalogSettings,
+        catalogScope: 'effective',
       });
     }));
 
@@ -152,6 +157,13 @@ export class DashboardService {
 
     return {
       feedType,
+      catalogScope: 'effective',
+      catalogSettingsAuthority: {
+        source: 'catalog-microservice',
+        settingsEndpoint: '/api/catalog/settings',
+        accessProvisionEndpoint: '/api/catalog/access/provision',
+        settingsAvailable: Boolean(catalogSettings),
+      },
       products: filteredProducts,
       filters: {
         search,
@@ -170,22 +182,23 @@ export class DashboardService {
     };
   }
 
-  async getProductDetail(user: DashboardUser, productId: string, feedType = 'heureka_cz') {
+  async getProductDetail(user: DashboardUser, productId: string, feedType = 'heureka_cz', authorization?: string) {
     this.normalizeUser(user);
-    const product = await this.catalogClient.getProductById(productId);
+    const product = await this.catalogClient.getProductById(productId, { authorization, catalogScope: 'effective' });
     if (!product) {
       throw new NotFoundException(`Catalog product ${productId} not found`);
     }
 
-    const [stock, pricing, media, includedRow, offer, settings, contentPreview, marketplaceFields] = await Promise.all([
+    const [stock, pricing, media, includedRow, offer, settings, contentPreview, marketplaceFields, catalogSettings] = await Promise.all([
       this.warehouseClient.getTotalAvailable(productId),
-      this.catalogClient.getProductPricing(productId),
-      this.catalogClient.getProductMedia(productId),
+      this.catalogClient.getProductPricing(productId, { authorization }),
+      this.catalogClient.getProductMedia(productId, { authorization }),
       this.prisma.heurekaProduct.findUnique({ where: { productId } }),
       this.prisma.heurekaOffer.findFirst({ where: { productId }, orderBy: { updatedAt: 'desc' } }),
       this.prisma.heurekaSettings.findUnique({ where: { feedType } }).catch(() => null),
       this.getHeurekaContentPreview(productId),
       this.getHeurekaMarketplaceFields(productId),
+      this.catalogClient.getCatalogSettings({ authorization }),
     ]);
 
     const dashboardProduct = this.buildDashboardProduct(product, {
@@ -195,6 +208,8 @@ export class DashboardService {
       stock,
       pricing,
       media,
+      sourceSettings: catalogSettings,
+      catalogScope: 'effective',
     });
     const previewPlainText = this.resolvePreviewPlainText(contentPreview);
     const listing = this.buildListing(product, offer, pricing, stock, previewPlainText, marketplaceFields);
@@ -210,9 +225,9 @@ export class DashboardService {
     };
   }
 
-  async updateListing(user: DashboardUser, productId: string, body: any) {
+  async updateListing(user: DashboardUser, productId: string, body: any, authorization?: string) {
     const actor = this.normalizeUser(user);
-    const product = await this.catalogClient.getProductById(productId);
+    const product = await this.catalogClient.getProductById(productId, { authorization, catalogScope: 'effective' });
     if (!product) {
       throw new NotFoundException(`Catalog product ${productId} not found`);
     }
@@ -238,7 +253,7 @@ export class DashboardService {
     await this.updateHeurekaMarketplaceOverrides(productId, title, body);
 
     if (body.includeInFeed !== undefined) {
-      await this.setProductIncluded(actor, productId, body.includeInFeed !== false);
+      await this.setProductIncluded(actor, productId, body.includeInFeed !== false, authorization);
     }
 
     this.logger.log('Heureka listing updated from dashboard', {
@@ -259,12 +274,12 @@ export class DashboardService {
       responseSummary: { offerId: offer.id },
     });
 
-    return this.getProductDetail(actor, productId);
+    return this.getProductDetail(actor, productId, 'heureka_cz', authorization);
   }
 
-  async setProductIncluded(user: DashboardUser, productId: string, include: boolean) {
+  async setProductIncluded(user: DashboardUser, productId: string, include: boolean, authorization?: string) {
     const actor = this.normalizeUser(user);
-    const product = await this.catalogClient.getProductById(productId);
+    const product = await this.catalogClient.getProductById(productId, { authorization, catalogScope: 'effective' });
     if (!product) {
       throw new NotFoundException(`Catalog product ${productId} not found`);
     }
@@ -405,10 +420,10 @@ export class DashboardService {
     };
   }
 
-  async getOperations(user: DashboardUser, feedType = 'heureka_cz') {
+  async getOperations(user: DashboardUser, feedType = 'heureka_cz', authorization?: string) {
     this.normalizeUser(user);
     const [summary, feedStatus, feedHistory, settings, recentOrders] = await Promise.all([
-      this.getSummary(user, feedType),
+      this.getSummary(user, feedType, authorization),
       this.feedService.getFeedStatus(feedType).catch((error: any) => ({
         status: 'unavailable',
         message: error?.message || 'Feed status unavailable',
@@ -462,9 +477,9 @@ export class DashboardService {
     };
   }
 
-  async getReadinessLanes(user: DashboardUser, feedType = 'heureka_cz') {
+  async getReadinessLanes(user: DashboardUser, feedType = 'heureka_cz', authorization?: string) {
     this.normalizeUser(user);
-    const catalog = await this.collectActiveCatalogProducts();
+    const catalog = await this.collectActiveCatalogProducts(500, authorization);
     const productIds = catalog.items.map((product) => this.getCatalogProductId(product)).filter(Boolean);
     const readinessResponses = await this.collectBulkReadiness(feedType, productIds);
     const readinessItems = readinessResponses.flatMap((response) => Array.isArray(response?.items) ? response.items : []);
@@ -541,7 +556,7 @@ export class DashboardService {
   async getAdminStats(user: DashboardUser, authorization: string | undefined) {
     const actor = this.requireAdmin(user);
     const [summary, authUsers, localStats] = await Promise.all([
-      this.getSummary(actor),
+      this.getSummary(actor, 'heureka_cz', authorization),
       this.fetchAuthUsers(authorization, { limit: 5, offset: 0 }),
       this.getLocalUsageStats(),
     ]);
@@ -730,13 +745,13 @@ export class DashboardService {
     };
   }
 
-  private async collectActiveCatalogProducts(maxProducts = 500) {
+  private async collectActiveCatalogProducts(maxProducts = 500, authorization?: string) {
     const limit = 100;
     const items: any[] = [];
     let total = 0;
 
     for (let page = 1; items.length < maxProducts; page += 1) {
-      const catalog = await this.catalogClient.searchProducts({ isActive: true, page, limit });
+      const catalog = await this.catalogClient.searchProducts({ isActive: true, catalogScope: 'effective', page, limit }, { authorization });
       const pageItems = Array.isArray(catalog.items) ? catalog.items : [];
       items.push(...pageItems);
       total = Number(catalog.total || total || items.length);
@@ -962,7 +977,9 @@ export class DashboardService {
     const marketplaceOverrides = this.resolveMarketplaceOverrides(context.marketplaceFields);
     const category = marketplaceOverrides.categoryText || product.categoryText || product.categoryPath || product.categoryName || product.category || null;
     const name = offer?.title || marketplaceOverrides.productName || product.title || product.name || product.productName || 'Untitled product';
+    const catalogSource = this.buildCatalogSourceProjection(product, context.sourceSettings);
     const gaps = this.getProductGaps(product, pricing, media, stock, null, category);
+    if (catalogSource.communityVisible === false) gaps.push('catalog_source_resale');
     const quality = this.calculateQuality(gaps);
     const isIncluded = Boolean(context.includedRow?.isIncluded);
     const status = isIncluded
@@ -998,8 +1015,74 @@ export class DashboardService {
       gaps,
       offerId: offer?.id || null,
       catalogMarketplaceProfile: context.catalogMarketplaceProfile || this.buildCatalogMarketplaceProfile(null, context.marketplaceFields),
+      catalogScope: context.catalogScope || 'effective',
+      catalogSource,
       updatedAt: offer?.updatedAt || context.includedRow?.updatedAt || product.updatedAt || null,
     };
+  }
+
+  private buildCatalogSourceProjection(product: any, sourceSettings: any) {
+    const token = this.optionalString(
+      product.catalogSourceToken || product.sourceToken || product.sellerToken || product.ownerToken ||
+      product.source?.token || product.seller?.token || product.owner?.token,
+    );
+    const label = this.optionalString(
+      product.catalogSourceLabel || product.sourceLabel || product.sellerName || product.ownerName ||
+      product.source?.label || product.source?.name || product.seller?.name || product.owner?.name,
+    ) || (this.isAlfaresProductSource(product) ? 'Alfares' : null);
+    const resaleEnabled = this.resolveResaleEnabled(product);
+    const communityVisible = this.resolveCommunityVisibility(product, resaleEnabled, token, label);
+
+    return {
+      authority: 'catalog-microservice',
+      settingsEndpoint: '/api/catalog/settings',
+      accessProvisionEndpoint: '/api/catalog/access/provision',
+      settingsAvailable: Boolean(sourceSettings),
+      token,
+      label,
+      resaleEnabled,
+      communityVisible,
+    };
+  }
+
+  private resolveResaleEnabled(product: any): boolean | null {
+    const candidates = [
+      product.resaleEnabled,
+      product.resale?.enabled,
+      product.source?.resaleEnabled,
+      product.seller?.resaleEnabled,
+      product.owner?.resaleEnabled,
+    ];
+    for (const candidate of candidates) {
+      if (candidate === true || candidate === false) return candidate;
+    }
+    return null;
+  }
+
+  private resolveCommunityVisibility(product: any, resaleEnabled: boolean | null, token: string | null, label: string | null): boolean | null {
+    if (this.isAlfaresProductSource(product, token, label)) return resaleEnabled === false ? false : true;
+    if (token || label) return resaleEnabled === true;
+    return resaleEnabled === false ? false : null;
+  }
+
+  private isAlfaresProductSource(product: any, token?: string | null, label?: string | null): boolean {
+    if (product.isAlfaresProduct === true || product.alfaresProduct === true) return true;
+    const sourceValues = [
+      token,
+      label,
+      product.catalogSource,
+      product.catalogSourceToken,
+      product.catalogSourceLabel,
+      product.sourceType,
+      product.sourceKind,
+      product.ownerType,
+      product.source?.type,
+      product.source?.kind,
+      product.source?.token,
+      product.source?.label,
+      product.source?.name,
+    ];
+    return sourceValues.some((value) => String(value || '').toLowerCase().includes('alfares'));
   }
 
   private buildProductWorkflowProjection(context: { gaps: string[]; isIncluded: boolean; hasOffer: boolean }) {
@@ -1063,6 +1146,7 @@ export class DashboardService {
       price: 'Price is missing.',
       image: 'Primary product image is missing.',
       stock: 'Warehouse stock is zero or unavailable.',
+      catalog_source_resale: 'Catalog source resale is not enabled for community visibility.',
     };
     return labels[gap] || `Missing or invalid field: ${gap}`;
   }

@@ -3,6 +3,11 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { LoggerService } from '../logger/logger.service';
 
+type CatalogRequestContext = {
+  authorization?: string;
+  catalogScope?: string;
+};
+
 /**
  * API client for catalog-microservice
  * Fetches product data from the central catalog
@@ -21,10 +26,16 @@ export class CatalogClientService {
   /**
    * Get product by ID
    */
-  async getProductById(productId: string): Promise<any> {
+  async getProductById(productId: string, context: CatalogRequestContext = {}): Promise<any> {
     try {
+      const params = new URLSearchParams();
+      if (context.catalogScope) params.append('catalogScope', context.catalogScope);
+      const query = params.toString();
       const response = await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/api/products/${encodeURIComponent(productId)}`, this.catalogRequestOptions())
+        this.httpService.get(
+          `${this.baseUrl}/api/products/${encodeURIComponent(productId)}${query ? `?${query}` : ''}`,
+          this.catalogRequestOptions(context),
+        )
       );
       return response.data.data;
     } catch (error: unknown) {
@@ -38,10 +49,10 @@ export class CatalogClientService {
   /**
    * Get product by SKU
    */
-  async getProductBySku(sku: string): Promise<any> {
+  async getProductBySku(sku: string, context: CatalogRequestContext = {}): Promise<any> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/api/products/sku/${encodeURIComponent(sku)}`, this.catalogRequestOptions())
+        this.httpService.get(`${this.baseUrl}/api/products/sku/${encodeURIComponent(sku)}`, this.catalogRequestOptions(context))
       );
       if (!response.data.success || !response.data.data) {
         return null;
@@ -61,19 +72,21 @@ export class CatalogClientService {
     search?: string;
     isActive?: boolean;
     categoryId?: string;
+    catalogScope?: string;
     page?: number;
     limit?: number;
-  }): Promise<{ items: any[]; total: number; page: number; limit: number }> {
+  }, context: CatalogRequestContext = {}): Promise<{ items: any[]; total: number; page: number; limit: number }> {
     try {
       const params = new URLSearchParams();
       if (query.search) params.append('search', query.search);
       if (query.isActive !== undefined) params.append('isActive', String(query.isActive));
       if (query.categoryId) params.append('categoryId', query.categoryId);
+      if (query.catalogScope) params.append('catalogScope', query.catalogScope);
       if (query.page) params.append('page', String(query.page));
       if (query.limit) params.append('limit', String(query.limit));
 
       const response = await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/api/products?${params.toString()}`, this.catalogRequestOptions())
+        this.httpService.get(`${this.baseUrl}/api/products?${params.toString()}`, this.catalogRequestOptions(context))
       );
       return {
         items: response.data.data || [],
@@ -126,10 +139,10 @@ export class CatalogClientService {
   /**
    * Get product pricing
    */
-  async getProductPricing(productId: string): Promise<any> {
+  async getProductPricing(productId: string, context: CatalogRequestContext = {}): Promise<any> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/api/pricing/product/${encodeURIComponent(productId)}/current`, this.catalogRequestOptions())
+        this.httpService.get(`${this.baseUrl}/api/pricing/product/${encodeURIComponent(productId)}/current`, this.catalogRequestOptions(context))
       );
       return response.data.data;
     } catch (error: unknown) {
@@ -141,10 +154,10 @@ export class CatalogClientService {
   /**
    * Get product media
    */
-  async getProductMedia(productId: string): Promise<any[]> {
+  async getProductMedia(productId: string, context: CatalogRequestContext = {}): Promise<any[]> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/api/media/product/${encodeURIComponent(productId)}`, this.catalogRequestOptions())
+        this.httpService.get(`${this.baseUrl}/api/media/product/${encodeURIComponent(productId)}`, this.catalogRequestOptions(context))
       );
       return response.data.data || [];
     } catch (error: unknown) {
@@ -156,10 +169,10 @@ export class CatalogClientService {
   /**
    * Get public-safe Heureka feed fields rendered by Catalog.
    */
-  async getHeurekaFeedSnapshot(productId: string, feedType: string = 'heureka_cz'): Promise<any | null> {
+  async getHeurekaFeedSnapshot(productId: string, feedType: string = 'heureka_cz', context: CatalogRequestContext = {}): Promise<any | null> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get(`${this.baseUrl}/api/products/${encodeURIComponent(productId)}/heureka-feed-snapshot?feedType=${encodeURIComponent(feedType)}`, this.catalogRequestOptions())
+        this.httpService.get(`${this.baseUrl}/api/products/${encodeURIComponent(productId)}/heureka-feed-snapshot?feedType=${encodeURIComponent(feedType)}`, this.catalogRequestOptions(context))
       );
       return response.data?.data || null;
     } catch (error: unknown) {
@@ -188,6 +201,44 @@ export class CatalogClientService {
    */
   async updateHeurekaMarketplaceFields(productId: string, input: Record<string, unknown>): Promise<any | null> {
     return this.updateProtectedHeurekaProductResource(productId, 'marketplace-fields/heureka', input, 'Heureka marketplace fields');
+  }
+
+  /**
+   * Get Catalog-owned source settings for human-token effective scope labels.
+   */
+  async getCatalogSettings(context: CatalogRequestContext = {}): Promise<any | null> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(`${this.baseUrl}/api/catalog/settings`, this.catalogRequestOptions(context))
+      );
+      return response.data?.data || response.data || null;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(`Catalog settings not available: ${errorMessage}`, 'CatalogClient');
+      return null;
+    }
+  }
+
+  /**
+   * Provision private user Catalog settings without changing source opt-ins.
+   */
+  async provisionCatalogAccess(authorization: string | undefined, sourceApplication = 'heureka-service'): Promise<any | null> {
+    const headers = this.getCatalogHumanBearerHeaders(authorization);
+    if (!headers) {
+      this.logger.warn('Catalog access provisioning skipped: bearer token is not available', 'CatalogClient');
+      return null;
+    }
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(`${this.baseUrl}/api/catalog/access/provision`, { sourceApplication }, { headers }),
+      );
+      return response.data?.data || response.data || null;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(`Catalog access provisioning failed: ${errorMessage}`, 'CatalogClient');
+      return null;
+    }
   }
 
   private async getProtectedHeurekaProductResource(productId: string, path: string, label: string): Promise<any | null> {
@@ -229,9 +280,19 @@ export class CatalogClientService {
   }
 
 
-  private catalogRequestOptions(): { headers: Record<string, string> } | undefined {
-    const headers = this.getCatalogInternalServiceHeaders();
+  private catalogRequestOptions(context: CatalogRequestContext = {}): { headers: Record<string, string> } | undefined {
+    const headers = this.getCatalogHumanBearerHeaders(context.authorization) || this.getCatalogInternalServiceHeaders();
     return headers ? { headers } : undefined;
+  }
+
+  private getCatalogHumanBearerHeaders(authorization?: string): Record<string, string> | null {
+    const bearer = String(authorization || '').trim();
+    if (!bearer) {
+      return null;
+    }
+    return {
+      Authorization: bearer.startsWith('Bearer ') ? bearer : `Bearer ${bearer}`,
+    };
   }
 
   private getCatalogInternalServiceHeaders(): Record<string, string> | null {

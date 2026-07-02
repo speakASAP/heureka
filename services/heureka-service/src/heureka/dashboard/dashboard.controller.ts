@@ -14,7 +14,7 @@ export class DashboardController {
 
   @Get('summary')
   async summary(@Req() req: any, @Query('feedType') feedType = 'heureka_cz') {
-    return { success: true, data: await this.dashboardService.getSummary(req.user, feedType) };
+    return { success: true, data: await this.dashboardService.getSummary(req.user, feedType, req.headers.authorization) };
   }
 
   @Get('catalog-products')
@@ -36,23 +36,23 @@ export class DashboardController {
       feedStatus,
       workflowStatus,
       gap,
-    });
+    }, req.headers.authorization);
     return { success: true, data: result };
   }
 
   @Get('products/:productId')
   async product(@Req() req: any, @Param('productId') productId: string, @Query('feedType') feedType = 'heureka_cz') {
-    return { success: true, data: await this.dashboardService.getProductDetail(req.user, productId, feedType) };
+    return { success: true, data: await this.dashboardService.getProductDetail(req.user, productId, feedType, req.headers.authorization) };
   }
 
   @Put('products/:productId/listing')
   async updateListing(@Req() req: any, @Param('productId') productId: string, @Body() body: any) {
-    return { success: true, data: await this.dashboardService.updateListing(req.user, productId, body || {}) };
+    return { success: true, data: await this.dashboardService.updateListing(req.user, productId, body || {}, req.headers.authorization) };
   }
 
   @Post('products/:productId/include')
   async includeProduct(@Req() req: any, @Param('productId') productId: string, @Body() body: { include?: boolean }) {
-    return { success: true, data: await this.dashboardService.setProductIncluded(req.user, productId, body?.include !== false) };
+    return { success: true, data: await this.dashboardService.setProductIncluded(req.user, productId, body?.include !== false, req.headers.authorization) };
   }
 
   @Post('feed/regenerate')
@@ -92,7 +92,7 @@ export class DashboardController {
 
   @Get('operations')
   async operations(@Req() req: any, @Query('feedType') feedType = 'heureka_cz') {
-    return { success: true, data: await this.dashboardService.getOperations(req.user, feedType) };
+    return { success: true, data: await this.dashboardService.getOperations(req.user, feedType, req.headers.authorization) };
   }
 
   @Get('operations/history')
@@ -102,7 +102,7 @@ export class DashboardController {
 
   @Get('readiness/lanes')
   async readinessLanes(@Req() req: any, @Query('feedType') feedType = 'heureka_cz') {
-    return { success: true, data: await this.dashboardService.getReadinessLanes(req.user, feedType) };
+    return { success: true, data: await this.dashboardService.getReadinessLanes(req.user, feedType, req.headers.authorization) };
   }
 
   @Get('settings')

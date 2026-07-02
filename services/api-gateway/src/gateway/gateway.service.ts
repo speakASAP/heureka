@@ -303,6 +303,8 @@ export class GatewayService implements OnModuleInit {
       return '';
     };
 
+    const catalogServiceUrl = getServiceUrl('CATALOG_SERVICE_URL', 'CATALOG_SERVICE_PORT') || 'http://catalog-microservice:3200';
+
     const serviceUrls: Record<string, string> = {
       heureka: getServiceUrl('HEUREKA_SERVICE_URL', 'HEUREKA_SERVICE_PORT', 'heureka'),
       aukro: getServiceUrl('AUKRO_SERVICE_URL', 'AUKRO_SERVICE_PORT', 'aukro'),
@@ -315,6 +317,7 @@ export class GatewayService implements OnModuleInit {
                 ? this.configService.get<string>('AUTH_SERVICE_URL')
                 : (this.configService.get<string>('AUTH_SERVICE_URL') || this.throwConfigError('AUTH_SERVICE_URL'))))
         : (this.configService.get<string>('AUTH_SERVICE_URL') || this.throwConfigError('AUTH_SERVICE_URL')),
+      catalog: catalogServiceUrl,
     };
 
     const optionalImportUrl = getServiceUrl('IMPORT_SERVICE_URL', 'IMPORT_SERVICE_PORT');
@@ -551,7 +554,7 @@ export class GatewayService implements OnModuleInit {
     const isHttps = url.startsWith('https://');
 
     // Determine if this is an internal Docker service or external service
-    const isInternalService = ['heureka', 'aukro', 'import', 'settings'].includes(serviceName);
+    const isInternalService = ['heureka', 'aukro', 'catalog', 'import', 'settings'].includes(serviceName);
     const isExternalService = serviceName === 'auth' && isHttps;
 
     // Generate request ID for tracking (must be before config to use in metadata)
