@@ -25,6 +25,7 @@ async function main(): Promise<void> {
     ['dashboardProducts', 'dashboard/products'],
     ['dashboardFeed', 'dashboard/feed'],
     ['dashboardOrders', 'dashboard/orders'],
+    ['dashboardOrderDetail', 'dashboard/orders/:id'],
     ['dashboardOperations', 'dashboard/operations'],
     ['dashboardSettings', 'dashboard/settings'],
     ['dashboardAdminUsers', 'dashboard/admin/users'],
@@ -48,6 +49,16 @@ async function main(): Promise<void> {
   assertIncludes(productsPage, "window.fetch('/api/catalog/access/provision'", 'catalog access provisioning endpoint');
   assertIncludes(productsPage, "body: JSON.stringify({ sourceApplication: AUTH_CLIENT_ID })", 'catalog provisioning source application');
   assertIncludes(productsPage, "Připravujeme váš katalogový prostor.", 'catalog provisioning callback status');
+
+  const ordersPage = String(controller.dashboardOrders());
+  assertIncludes(ordersPage, 'ORDER_STATUS_POLL_MS = 30000', 'orders polling interval');
+  assertIncludes(ordersPage, 'document.addEventListener(\'visibilitychange\'', 'orders polling visibility pause');
+  assertIncludes(ordersPage, 'data-order-detail', 'orders detail action');
+  assertIncludes(ordersPage, 'api(\'/heureka/dashboard/orders/\'', 'orders detail API refresh');
+  assertIncludes(ordersPage, 'Select an order to inspect central lifecycle, payment and delivery status.', 'orders detail panel copy');
+
+  const orderDetailPage = String(controller.dashboardOrderDetail());
+  assertIncludes(orderDetailPage, 'data-page="dashboard"', 'order detail dashboard shell');
 
   const adminPage = String(controller.dashboardAdminUsers());
   assertIncludes(adminPage, 'orderLifecycleStats', 'admin central order lifecycle stats rendering');

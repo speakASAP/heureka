@@ -52,6 +52,12 @@ export class PublicController {
     return this.dashboard();
   }
 
+  @Get('dashboard/orders/:id')
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  dashboardOrderDetail() {
+    return this.dashboard();
+  }
+
   @Get('dashboard/operations')
   @Header('Content-Type', 'text/html; charset=utf-8')
   dashboardOperations() {
@@ -431,13 +437,18 @@ export class PublicController {
           <select id="orders-status-filter" aria-label="Local order status"><option value="all">All local statuses</option><option value="pending">Pending</option><option value="failed">Failed</option><option value="cancelled">Cancelled</option></select>
         </div>
         <div id="orders-metrics" class="dashboard-metrics"></div>
-        <div class="table-scroll">
-          <table class="dashboard-table">
-            <thead>
-              <tr><th>External ID</th><th>Central order</th><th>Customer</th><th>Total</th><th>Lifecycle</th><th>Local</th><th>Forwarding</th><th>Created</th></tr>
-            </thead>
-            <tbody id="orders-table-body"></tbody>
-          </table>
+        <div class="orders-workspace">
+          <div class="table-scroll orders-table-panel">
+            <table class="dashboard-table">
+              <thead>
+                <tr><th>External ID</th><th>Central order</th><th>Customer</th><th>Total</th><th>Lifecycle</th><th>Local</th><th>Forwarding</th><th>Created</th><th></th></tr>
+              </thead>
+              <tbody id="orders-table-body"></tbody>
+            </table>
+          </div>
+          <aside class="order-detail-panel" id="order-detail-panel">
+            <div class="dashboard-notice">Select an order to inspect central lifecycle, payment and delivery status.</div>
+          </aside>
         </div>
       </section>
       <section class="admin-panel" id="operations-section" hidden>
@@ -990,6 +1001,42 @@ export class PublicController {
     return date.toLocaleString('cs-CZ');
   }
 
+  var ORDER_STATUS_POLL_MS = 30000;
+  var ordersPollTimer = null;
+  var ordersLoading = false;
+  var selectedOrderId = null;
+
+  function dashboardRouteKey() {
+    var path = window.location.pathname;
+    return path.indexOf('/dashboard/admin') === 0 ? 'admin'
+      : (path.indexOf('/dashboard/orders') === 0 ? 'orders'
+      : (path.indexOf('/dashboard/operations') === 0 ? 'operations'
+      : (path.indexOf('/dashboard/settings') === 0 ? 'settings'
+      : (path === '/dashboard' || path.indexOf('/dashboard/feed') === 0 ? 'feed' : 'products'))));
+  }
+
+  function routeOrderId() {
+    var match = window.location.pathname.match(/^\/dashboard\/orders\/([^/]+)$/);
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
+  function isOrdersRouteVisible() {
+    return dashboardRouteKey() === 'orders' && !document.hidden;
+  }
+
+  function stopOrdersPolling() {
+    if (ordersPollTimer) window.clearTimeout(ordersPollTimer);
+    ordersPollTimer = null;
+  }
+
+  function scheduleOrdersPolling() {
+    stopOrdersPolling();
+    if (!isOrdersRouteVisible()) return;
+    ordersPollTimer = window.setTimeout(function () {
+      refreshOrdersStatus({ polling: true });
+    }, ORDER_STATUS_POLL_MS);
+  }
+
   function renderOrders(data) {
     var body = document.getElementById('orders-table-body');
     var count = document.getElementById('orders-count');
@@ -1021,8 +1068,57 @@ export class PublicController {
       ].filter(Boolean).join(' · ');
       var centralId = order.orderId || lifecycle.centralOrderId || '';
       var forwardingState = lifecycle.state === 'missing_id' ? 'missing_id' : (order.forwarded ? 'forwarded' : 'local');
-      return '<tr><td>' + escapeHtml(order.externalOrderId || '') + '</td><td>' + escapeHtml(centralId) + '</td><td>' + escapeHtml(order.customerEmail || order.customerPhone || '') + '</td><td>' + escapeHtml(formatNumber(order.total || 0)) + ' ' + escapeHtml(order.currency || 'CZK') + '</td><td>' + statusChip(lifecycleStatus) + (lifecycleDetail ? '<p class="table-subtext">' + escapeHtml(lifecycleDetail) + '</p>' : '') + '</td><td>' + statusChip(order.localStatus || 'unknown') + '</td><td>' + statusChip(forwardingState) + '</td><td>' + escapeHtml(formatDate(order.createdAt)) + '</td></tr>';
-    }).join('') || '<tr><td colspan="8">No Heureka orders found</td></tr>';
+      var selected = selectedOrderId && selectedOrderId === order.id;
+      return '<tr data-order-id="' + escapeHtml(order.id) + '" class="' + (selected ? 'is-selected' : '') + '"><td>' + escapeHtml(order.externalOrderId || '') + '</td><td>' + escapeHtml(centralId) + '</td><td>' + escapeHtml(order.customerEmail || order.customerPhone || '') + '</td><td>' + escapeHtml(formatNumber(order.total || 0)) + ' ' + escapeHtml(order.currency || 'CZK') + '</td><td>' + statusChip(lifecycleStatus) + (lifecycleDetail ? '<p class="table-subtext">' + escapeHtml(lifecycleDetail) + '</p>' : '') + '</td><td>' + statusChip(order.localStatus || 'unknown') + '</td><td>' + statusChip(forwardingState) + '</td><td>' + escapeHtml(formatDate(order.createdAt)) + '</td><td><button class="table-action button-reset" type="button" data-order-detail="' + escapeHtml(order.id) + '">View</button></td></tr>';
+    }).join('') || '<tr><td colspan="9">No Heureka orders found</td></tr>';
+    Array.prototype.forEach.call(document.querySelectorAll('[data-order-detail]'), function (button) {
+      button.addEventListener('click', function () {
+        loadOrderDetail(button.getAttribute('data-order-detail'), { pushState: true });
+      });
+    });
+  }
+
+  function renderOrderDetail(order) {
+    var panel = document.getElementById('order-detail-panel');
+    if (!panel) return;
+    if (!order) {
+      panel.innerHTML = '<div class="dashboard-notice">Select an order to inspect central lifecycle, payment and delivery status.</div>';
+      return;
+    }
+    var lifecycle = order.centralLifecycle || {};
+    var lifecycleStatus = lifecycle.status || order.lifecycleStatus || order.status || 'unknown';
+    var lifecycleStage = lifecycle.stage || order.lifecycleStage || 'unknown';
+    var delivery = lifecycle.reservationStatus || lifecycle.warehouseHandoffStatus || 'unknown';
+    var payment = lifecycle.paymentStatus || lifecycle.paymentState || lifecycleStatus;
+    var missing = lifecycle.missing || [];
+    panel.innerHTML = '<div class="order-detail-head"><div><span>Order detail</span><strong>' + escapeHtml(order.externalOrderId || order.id || '') + '</strong></div>' + statusChip(lifecycleStatus) + '</div>' +
+      '<dl class="order-detail-list">' +
+        '<div><dt>Central order</dt><dd>' + escapeHtml(order.orderId || lifecycle.centralOrderId || '[MISSING: central Orders id]') + '</dd></div>' +
+        '<div><dt>Lifecycle stage</dt><dd>' + escapeHtml(humanize(lifecycleStage)) + '</dd></div>' +
+        '<div><dt>Payment status</dt><dd>' + escapeHtml(humanize(payment)) + '</dd></div>' +
+        '<div><dt>Delivery status</dt><dd>' + escapeHtml(humanize(delivery)) + '</dd></div>' +
+        '<div><dt>Local Heureka status</dt><dd>' + escapeHtml(humanize(order.localStatus || 'unknown')) + '</dd></div>' +
+        '<div><dt>Last central read</dt><dd>' + escapeHtml(formatDate(lifecycle.readAt)) + '</dd></div>' +
+      '</dl>' +
+      (missing.length ? '<div class="dashboard-notice"><strong>Lifecycle blockers</strong><p>' + escapeHtml(missing.join(', ')) + '</p></div>' : '');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-order-id]'), function (row) {
+      row.classList.toggle('is-selected', row.getAttribute('data-order-id') === order.id);
+    });
+  }
+
+  function loadOrderDetail(orderId, options) {
+    if (!orderId) {
+      selectedOrderId = null;
+      renderOrderDetail(null);
+      return Promise.resolve();
+    }
+    selectedOrderId = orderId;
+    if (options && options.pushState && window.history && window.history.pushState) {
+      window.history.pushState({}, '', '/dashboard/orders/' + encodeURIComponent(orderId));
+    }
+    return api('/heureka/dashboard/orders/' + encodeURIComponent(orderId))
+      .then(function (payload) { renderOrderDetail(payload.data); })
+      .catch(showDashboardError);
   }
 
   function renderOperationEvents(data) {
@@ -1119,7 +1215,7 @@ export class PublicController {
     }
   }
 
-  function loadOrdersData() {
+  function loadOrdersData(options) {
     var filter = document.getElementById('orders-status-filter');
     var status = filter && filter.value ? filter.value : 'all';
     return Promise.all([
@@ -1128,7 +1224,28 @@ export class PublicController {
     ]).then(function (results) {
       renderMetrics(results[0].data);
       renderOrders(results[1].data);
-    }).catch(showDashboardError);
+      var routeId = routeOrderId();
+      if (routeId) selectedOrderId = routeId;
+      if (!selectedOrderId && results[1].data && results[1].data.orders && results[1].data.orders[0]) {
+        selectedOrderId = results[1].data.orders[0].id;
+      }
+      return loadOrderDetail(selectedOrderId, { pushState: false });
+    }).catch(showDashboardError).finally(function () {
+      if (!options || options.schedulePolling !== false) scheduleOrdersPolling();
+    });
+  }
+
+  function refreshOrdersStatus(options) {
+    if (!isOrdersRouteVisible() || ordersLoading) {
+      scheduleOrdersPolling();
+      return Promise.resolve();
+    }
+    ordersLoading = true;
+    return loadOrdersData({ schedulePolling: false, polling: options && options.polling })
+      .finally(function () {
+        ordersLoading = false;
+        scheduleOrdersPolling();
+      });
   }
 
   function loadOperationsData() {
@@ -1152,7 +1269,8 @@ export class PublicController {
 
   function loadCurrentRoute() {
     var route = setActiveDashboardRoute();
-    if (route === 'orders') return loadOrdersData();
+    if (route !== 'orders') stopOrdersPolling();
+    if (route === 'orders') return refreshOrdersStatus();
     if (route === 'operations') return loadOperationsData();
     if (route === 'settings') return loadSettingsData();
     if (route === 'admin') return loadAdminData();
@@ -1263,7 +1381,12 @@ export class PublicController {
       if (filter) filter.addEventListener('change', loadDashboardData);
     });
     var ordersStatus = document.getElementById('orders-status-filter');
-    if (ordersStatus) ordersStatus.addEventListener('change', loadOrdersData);
+    if (ordersStatus) ordersStatus.addEventListener('change', function () { refreshOrdersStatus(); });
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) stopOrdersPolling();
+      else if (dashboardRouteKey() === 'orders') refreshOrdersStatus();
+    });
+    window.addEventListener('popstate', loadCurrentRoute);
     var regenerate = document.getElementById('regenerate-feed');
     if (regenerate) {
       regenerate.addEventListener('click', function () {
@@ -1765,6 +1888,17 @@ td b.danger { background: #ffe8ea; color: var(--red); }
   background: #fff;
 }
 .products-table-panel { border-right: 0; }
+.orders-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+.orders-table-panel { min-width: 0; }
+.order-detail-panel { min-height: 260px; padding: 18px; border: 1px solid #d9e0e7; border-radius: 3px; background: #fff; }
+.order-detail-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 16px; }
+.order-detail-head span { display: block; color: #64748b; font-size: 12px; text-transform: uppercase; }
+.order-detail-head strong { display: block; margin-top: 4px; word-break: break-word; }
+.order-detail-list { display: grid; gap: 12px; margin: 0 0 16px; }
+.order-detail-list div { display: grid; gap: 4px; }
+.order-detail-list dt { color: #64748b; font-size: 12px; }
+.order-detail-list dd { margin: 0; font-weight: 700; word-break: break-word; }
+.dashboard-table tr.is-selected td { background: #eef6ff; }
 .products-toolbar {
   display: flex;
   justify-content: space-between;
@@ -1895,6 +2029,7 @@ td b.danger { background: #ffe8ea; color: var(--red); }
   .dashboard-metrics { grid-template-columns: 1fr; }
   .products-toolbar, .dashboard-topline, .products-filter { flex-direction: column; align-items: stretch; }
   .dashboard-actions { justify-content: stretch; }
+  .orders-workspace { grid-template-columns: 1fr; }
   .dashboard-actions .primary-button, .dashboard-actions .secondary-button { width: 100%; }
 }`;
   }
