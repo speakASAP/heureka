@@ -49,6 +49,11 @@ async function main(): Promise<void> {
   assertIncludes(productsPage, "body: JSON.stringify({ sourceApplication: AUTH_CLIENT_ID })", 'catalog provisioning source application');
   assertIncludes(productsPage, "Připravujeme váš katalogový prostor.", 'catalog provisioning callback status');
 
+  const adminPage = String(controller.dashboardAdminUsers());
+  assertIncludes(adminPage, 'orderLifecycleStats', 'admin central order lifecycle stats rendering');
+  assertIncludes(adminPage, 'Warehouse reserved', 'admin delivery reservation metric');
+  assertIncludes(adminPage, 'Delivery unknown', 'admin delivery unknown metric');
+
   console.log('PASS public-dashboard-routes self-test');
 }
 

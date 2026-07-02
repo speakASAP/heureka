@@ -1155,11 +1155,17 @@ export class PublicController {
       if (count) count.textContent = formatNumber(users.count || 0) + ' registered Auth users';
       if (metrics) {
         var local = stats.localStats || users.localStats || {};
+        var orderLifecycleStats = stats.orderLifecycleStats || {};
+        var centralStats = orderLifecycleStats.centralStatusCounts || {};
+        var deliveryStats = orderLifecycleStats.deliveryStats || {};
+        var missingOrStale = Number(centralStats.missingId || 0) + Number(centralStats.stale || 0);
         metrics.innerHTML = [
           ['Included products', local.includedProducts || 0, 'Heureka feed'],
-          ['Offers', local.activeOffers || 0, 'Active listings'],
-          ['Orders', local.orders || 0, 'Tracked locally'],
-          ['Feeds', local.feeds || 0, 'Generation records']
+          ['Orders', orderLifecycleStats.totalLocalOrders || local.orders || 0, 'Tracked locally'],
+          ['Central lifecycle', centralStats.available || 0, 'Orders lifecycle read'],
+          ['Missing/stale lifecycle', missingOrStale, 'Needs repair or readback'],
+          ['Warehouse reserved', deliveryStats.warehouseReserved || 0, 'Central delivery signal'],
+          ['Delivery unknown', deliveryStats.unknownDeliverySignal || 0, 'No current delivery signal']
         ].map(function (item) {
           return '<article class="dash-metric"><span>' + escapeHtml(item[0]) + '</span><strong>' + escapeHtml(formatNumber(item[1])) + '</strong><p>' + escapeHtml(item[2]) + '</p></article>';
         }).join('');

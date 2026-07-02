@@ -642,10 +642,11 @@ export class DashboardService {
 
   async getAdminStats(user: DashboardUser, authorization: string | undefined) {
     const actor = this.requireAdmin(user);
-    const [summary, authUsers, localStats] = await Promise.all([
+    const [summary, authUsers, localStats, orderLifecycleStats] = await Promise.all([
       this.getSummary(actor, 'heureka_cz', authorization),
       this.fetchAuthUsers(authorization, { limit: 5, offset: 0 }),
       this.getLocalUsageStats(),
+      this.getAdminOrderLifecycleStats(),
     ]);
     return {
       summary,
@@ -657,6 +658,7 @@ export class DashboardService {
         missing: authUsers.missing,
       },
       localStats,
+      orderLifecycleStats,
     };
   }
 
@@ -809,6 +811,82 @@ export class DashboardService {
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
     };
+  }
+
+  private async getAdminOrderLifecycleStats(sampleLimit = 50) {
+    const limit = this.clampNumber(sampleLimit, 50, 1, 100);
+    const [totalLocalOrders, pending, forwarded, failed, cancelled, recentOrders] = await Promise.all([
+      this.prisma.heurekaOrder.count(),
+      this.prisma.heurekaOrder.count({ where: { status: 'pending' } }),
+      this.prisma.heurekaOrder.count({ where: { forwarded: true } }),
+      this.prisma.heurekaOrder.count({ where: { status: 'failed' } }),
+      this.prisma.heurekaOrder.count({ where: { status: 'cancelled' } }),
+      this.prisma.heurekaOrder.findMany({ orderBy: { createdAt: 'desc' }, take: limit }),
+    ]);
+    const readModels = await this.serializeOrdersWithCentralLifecycle(recentOrders);
+    const centralStatusCounts = this.countCentralLifecycle(readModels);
+
+    return {
+      contractVersion: 'heureka.admin-orders-delivery-stats.v1',
+      generatedAt: new Date().toISOString(),
+      readOnly: true,
+      mutations: [],
+      sampleLimit: limit,
+      sampleSize: readModels.length,
+      totalLocalOrders,
+      localStatusCounts: { pending, forwarded, failed, cancelled },
+      centralStatusCounts,
+      lifecycleStageCounts: this.countBy(readModels.map((order) => order.centralLifecycle?.stage || order.lifecycleStage || 'unknown')),
+      reservationStatusCounts: this.countBy(readModels.map((order) => order.centralLifecycle?.reservationStatus || order.centralLifecycle?.warehouseHandoffStatus || 'unknown')),
+      deliveryStats: this.buildDeliveryStats(readModels),
+      missing: this.collectCentralLifecycleMissing(readModels),
+    };
+  }
+
+  private buildDeliveryStats(orders: any[]) {
+    return (orders || []).reduce((stats, order) => {
+      const lifecycle = order.centralLifecycle || {};
+      const reservation = this.optionalString(lifecycle.reservationStatus || lifecycle.warehouseHandoffStatus);
+      const status = String(lifecycle.status || '').toLowerCase();
+      const stage = String(lifecycle.stage || '').toLowerCase();
+      const signal = [status, stage, reservation || ''].join(' ').toLowerCase();
+      const delivered = status === 'delivered' || stage === 'delivered' || signal.includes('delivered');
+      const deliveryInProgress = !delivered && (signal.includes('deliver') || signal.includes('ship') || signal.includes('dispatch'));
+
+      if (reservation === 'reserved') stats.warehouseReserved += 1;
+      if (delivered) stats.delivered += 1;
+      if (deliveryInProgress) stats.deliveryInProgress += 1;
+      if (lifecycle.stale) stats.staleLifecycle += 1;
+      if (lifecycle.state === 'missing_id') stats.missingCentralId += 1;
+      if (!reservation && !delivered && !deliveryInProgress) stats.unknownDeliverySignal += 1;
+      return stats;
+    }, {
+      warehouseReserved: 0,
+      deliveryInProgress: 0,
+      delivered: 0,
+      staleLifecycle: 0,
+      missingCentralId: 0,
+      unknownDeliverySignal: 0,
+    });
+  }
+
+  private countBy(values: Array<string | null | undefined>) {
+    return values.reduce((counts, value) => {
+      const key = this.optionalString(value) || 'unknown';
+      counts[key] = (counts[key] || 0) + 1;
+      return counts;
+    }, {} as Record<string, number>);
+  }
+
+  private collectCentralLifecycleMissing(orders: any[]) {
+    const missing = new Set<string>();
+    (orders || []).forEach((order) => {
+      (order.centralLifecycle?.missing || []).forEach((item: unknown) => {
+        const marker = this.optionalString(item);
+        if (marker) missing.add(marker);
+      });
+    });
+    return Array.from(missing).sort();
   }
 
   private async getLocalUsageStats() {

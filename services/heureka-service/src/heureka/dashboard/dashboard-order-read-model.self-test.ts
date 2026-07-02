@@ -90,6 +90,16 @@ async function main(): Promise<void> {
   assertEqual(detail.centralLifecycle.source, 'orders-microservice');
   assertEqual(detail.centralLifecycle.stale, false);
 
+  const adminOrderStats = await (service as any).getAdminOrderLifecycleStats(10);
+  assertEqual(adminOrderStats.contractVersion, 'heureka.admin-orders-delivery-stats.v1');
+  assertEqual(adminOrderStats.totalLocalOrders, 3);
+  assertEqual(adminOrderStats.centralStatusCounts.available, 1);
+  assertEqual(adminOrderStats.centralStatusCounts.missingId, 1);
+  assertEqual(adminOrderStats.deliveryStats.warehouseReserved, 1);
+  assertEqual(adminOrderStats.deliveryStats.unknownDeliverySignal, 2);
+  assertIncludes(adminOrderStats.missing, '[MISSING: central Orders id]');
+  assertIncludes(adminOrderStats.missing, ORDER_LIFECYCLE_READ_CONTRACT_MISSING);
+
   console.log('PASS dashboard-order-read-model self-test');
 }
 

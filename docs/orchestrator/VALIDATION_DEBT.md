@@ -16,6 +16,7 @@ Record known validation failures that are not caused by the current task, so age
 | ID | Date | Command | Failure Summary | Scope | Owner | Blocks Current Task? | Unblock Condition | Evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | VD-001 | YYYY-MM-DD | `[command]` | `[sanitized failure]` | repo-wide / task-specific / external service | `[owner]` | yes/no | `[required fix or approval]` | `[report path or safe excerpt]` |
+| VD-002 | 2026-07-02 | `npm run ips:audit` | strict_doc_audit fails because `12_validation/VAL-TASK-004.md` through `VAL-TASK-007.md` reference missing legacy repo path `/home/ssf/Documents/Github/heureka-service` while the active repo path is `/home/ssf/Documents/Github/heureka`. | repo-wide documentation path debt | IPS/docs owner | no | Update legacy validation docs to the current repo path or create an approved compatibility artifact. | 2026-07-02 worker run: score 60/100, 4 HIGH path findings. |
 
 ## Current-Task Decision Checklist
 
