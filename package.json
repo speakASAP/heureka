@@ -10,6 +10,7 @@
     "ips:deployment-readiness": "python3 scripts/deployment_readiness_gate.py --root .",
     "ips:check": "npm run ips:audit && npm run ips:pre-coding",
     "verify:heureka-order-ingestion": "node scripts/verify_heureka_order_ingestion_contract.js",
+    "reconcile:availability": "ts-node --skip-ignore --compiler-options '{\"experimentalDecorators\":true,\"emitDecoratorMetadata\":true,\"types\":[\"node\"]}' scripts/reconcile_heureka_availability.ts",
     "verify:heureka-stock-readiness-live": "node scripts/verify_heureka_stock_readiness_live.js",
     "verify:heureka-blocked-product-lanes": "node scripts/verify_heureka_blocked_product_lanes.js",
     "verify:heureka-external-readiness": "node scripts/verify_heureka_external_readiness.js",
