@@ -1039,6 +1039,13 @@ export class PublicController {
     }).catch(showDashboardError);
   }
 
+  var dashboardSearchTimer = null;
+
+  function scheduleDashboardSearch() {
+    if (dashboardSearchTimer) window.clearTimeout(dashboardSearchTimer);
+    dashboardSearchTimer = window.setTimeout(loadDashboardData, 300);
+  }
+
   function loadDashboardData() {
     var search = document.getElementById('products-search');
     var feedStatus = document.getElementById('products-feed-status');
@@ -1079,8 +1086,18 @@ export class PublicController {
     }
     var refresh = document.getElementById('dashboard-refresh');
     if (refresh) refresh.addEventListener('click', loadCurrentRoute);
-    var search = document.getElementById('products-search-button');
-    if (search) search.addEventListener('click', loadDashboardData);
+    var searchButton = document.getElementById('products-search-button');
+    if (searchButton) searchButton.addEventListener('click', loadDashboardData);
+    var searchInput = document.getElementById('products-search');
+    if (searchInput) {
+      searchInput.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          loadDashboardData();
+        }
+      });
+      searchInput.addEventListener('input', scheduleDashboardSearch);
+    }
     var bulkPreview = document.getElementById('bulk-readiness-preview');
     if (bulkPreview) bulkPreview.addEventListener('click', previewSelectedReadiness);
     ['products-feed-status', 'products-workflow-status', 'products-gap-filter'].forEach(function (id) {

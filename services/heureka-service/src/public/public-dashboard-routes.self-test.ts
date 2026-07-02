@@ -35,6 +35,12 @@ async function main(): Promise<void> {
     assertIncludes(String((controller[methodName] as any).call(controller)), 'data-page="dashboard"', `${String(methodName)} page`);
   }
 
+  const productsPage = String(controller.dashboardProducts());
+  assertIncludes(productsPage, "searchInput.addEventListener('keydown'", 'product search enter binding');
+  assertIncludes(productsPage, "event.key === 'Enter'", 'product search enter handling');
+  assertIncludes(productsPage, "searchInput.addEventListener('input', scheduleDashboardSearch)", 'product search input debounce binding');
+  assertIncludes(productsPage, "params.set('search', search.value.trim())", 'product search query parameter');
+
   console.log('PASS public-dashboard-routes self-test');
 }
 
