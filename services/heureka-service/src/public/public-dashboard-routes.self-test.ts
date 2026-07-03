@@ -56,6 +56,9 @@ async function main(): Promise<void> {
   assertIncludes(ordersPage, 'data-order-detail', 'orders detail action');
   assertIncludes(ordersPage, "api('/heureka/dashboard/orders-list?limit=50&status='", 'orders list API refresh');
   assertIncludes(ordersPage, 'api(\'/heureka/dashboard/orders/\'', 'orders detail API refresh');
+  const routeOrderIdFunction = ordersPage.match(/function routeOrderId\(\) \{([\s\S]*?)\n  \}/)?.[0] || '';
+  assertIncludes(routeOrderIdFunction, 'window.location.pathname.match', 'orders route id matcher present');
+  new Function(routeOrderIdFunction);
   assertIncludes(ordersPage, 'Select an order to inspect central lifecycle, payment and delivery status.', 'orders detail panel copy');
 
 

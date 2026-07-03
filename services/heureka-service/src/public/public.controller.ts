@@ -1033,7 +1033,7 @@ export class PublicController {
   }
 
   function routeOrderId() {
-    var match = window.location.pathname.match(/^\/dashboard\/orders\/([^/]+)$/);
+    var match = window.location.pathname.match(/^\\/dashboard\\/orders\\/([^\\/]+)$/);
     return match ? decodeURIComponent(match[1]) : null;
   }
 
