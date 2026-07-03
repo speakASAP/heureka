@@ -57,6 +57,27 @@ async function main(): Promise<void> {
   assertIncludes(ordersPage, 'api(\'/heureka/dashboard/orders/\'', 'orders detail API refresh');
   assertIncludes(ordersPage, 'Select an order to inspect central lifecycle, payment and delivery status.', 'orders detail panel copy');
 
+
+  const requiredLifecycleStages = [
+    'ordered_unpaid',
+    'payment_failed',
+    'paid_not_delivered',
+    'warehouse_fulfillment_requested',
+    'warehouse_collecting',
+    'warehouse_forming',
+    'warehouse_formed',
+    'handed_to_delivery',
+    'in_delivery',
+    'received',
+    'not_received',
+    'returned',
+    'cancelled',
+  ];
+  for (const stage of requiredLifecycleStages) {
+    assertIncludes(ordersPage, stage, `central lifecycle label coverage ${stage}`);
+  }
+  assertIncludes(ordersPage, 'CENTRAL_ORDER_LIFECYCLE_LABELS', 'central lifecycle label map');
+
   const orderDetailPage = String(controller.dashboardOrderDetail());
   assertIncludes(orderDetailPage, 'data-page="dashboard"', 'order detail dashboard shell');
 

@@ -31,6 +31,7 @@ function verifySourceContracts() {
   const configmap = read('k8s/configmap.yaml');
   const contract = read('23_documentation_contracts/HEUREKA_ORDER_INGESTION_CONTRACT.md');
   const smokeDoc = read('docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md');
+  const publicController = read('services/heureka-service/src/public/public.controller.ts');
 
   assert.match(orderClient, /const CREATE_ORDER_CONTRACT_VERSION = 'orders\.create\.v1'/);
   assert.match(orderClient, /process\.env\.ORDERS_SERVICE_URL/);
@@ -51,6 +52,28 @@ function verifySourceContracts() {
   assert.match(deployment, /key: CLIPLOT_WAREHOUSE_SERVICE_TOKEN/);
   assert.match(configmap, /ORDER_SERVICE_URL: "http:\/\/orders-microservice:3203"/);
   assert.match(configmap, /WAREHOUSE_SERVICE_URL: "http:\/\/warehouse-microservice:3201"/);
+
+
+  const requiredLifecycleStages = [
+    'ordered_unpaid',
+    'payment_failed',
+    'paid_not_delivered',
+    'warehouse_fulfillment_requested',
+    'warehouse_collecting',
+    'warehouse_forming',
+    'warehouse_formed',
+    'handed_to_delivery',
+    'in_delivery',
+    'received',
+    'not_received',
+    'returned',
+    'cancelled',
+  ];
+  for (const stage of requiredLifecycleStages) {
+    assert.ok(publicController.includes(stage), `Missing dashboard lifecycle label coverage: ${stage}`);
+  }
+  assert.ok(publicController.includes('ORDER_STATUS_POLL_MS = 30000'), 'Dashboard orders polling must remain enabled');
+  assert.ok(publicController.includes("document.addEventListener('visibilitychange'"), 'Dashboard orders polling must pause/resume on visibility changes');
 
   for (const required of [
     'orders.create.v1',

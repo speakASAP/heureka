@@ -687,8 +687,25 @@ export class PublicController {
     return new Intl.NumberFormat('cs-CZ').format(Number(value || 0));
   }
 
+  var CENTRAL_ORDER_LIFECYCLE_LABELS = {
+    ordered_unpaid: 'Ordered unpaid',
+    payment_failed: 'Payment failed',
+    paid_not_delivered: 'Paid, not delivered',
+    warehouse_fulfillment_requested: 'Warehouse fulfillment requested',
+    warehouse_collecting: 'Warehouse collecting',
+    warehouse_forming: 'Warehouse forming shipment',
+    warehouse_formed: 'Warehouse shipment formed',
+    handed_to_delivery: 'Handed to delivery',
+    in_delivery: 'In delivery',
+    received: 'Received',
+    not_received: 'Not received',
+    returned: 'Returned',
+    cancelled: 'Cancelled'
+  };
+
   function humanize(value) {
-    return text(value || 'unknown').replace(/_/g, ' ');
+    var normalized = text(value || 'unknown');
+    return CENTRAL_ORDER_LIFECYCLE_LABELS[normalized] || normalized.replace(/_/g, ' ');
   }
 
   function statusChip(status) {
