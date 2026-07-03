@@ -1,3 +1,4 @@
+import * as assert from "assert/strict";
 import { ORDER_LIFECYCLE_READ_CONTRACT_MISSING } from '@heureka/shared';
 import { DashboardService } from './dashboard.service';
 
@@ -70,7 +71,12 @@ async function main(): Promise<void> {
     orderClient as any,
   );
 
-  const list = await service.listOrders({ id: 'user-1', email: 'user@example.test', roles: [] }, { limit: '10', status: 'all' });
+  await assert.rejects(
+    () => service.listOrders({ id: 'user-1', email: 'user@example.test', roles: [] }, { limit: '10', status: 'all' }),
+    /Heureka admin access required/,
+  );
+
+  const list = await service.listOrders({ id: 'admin-1', email: 'admin@example.test', roles: ['app:heureka-service:admin'] }, { limit: '10', status: 'all' });
   assertEqual(list.orders.length, 3);
   assertEqual(list.orders[0].status, 'paid');
   assertEqual(list.orders[0].localStatus, 'pending');
@@ -85,7 +91,7 @@ async function main(): Promise<void> {
   assertEqual(list.centralStatusCounts.missingId, 1);
   assertEqual(list.centralStatusCounts.stale, 2);
 
-  const detail = await service.getOrderDetail({ id: 'user-1', email: 'user@example.test', roles: [] }, 'heureka-1');
+  const detail = await service.getOrderDetail({ id: 'admin-1', email: 'admin@example.test', roles: ['app:heureka-service:admin'] }, 'heureka-1');
   assertEqual(detail.status, 'paid');
   assertEqual(detail.centralLifecycle.source, 'orders-microservice');
   assertEqual(detail.centralLifecycle.stale, false);

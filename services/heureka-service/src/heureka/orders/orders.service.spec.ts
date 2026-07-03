@@ -47,6 +47,13 @@ function makeService(overrides: any = {}) {
 
 async function run() {
   {
+    const { service } = makeService();
+    await assert.rejects(() => service.listOrders({ roles: [] }, 'true'), /Heureka order read requires admin role/);
+    await service.listOrders({ roles: ['app:heureka-service:admin'] }, 'true');
+    await assert.rejects(() => service.getOrder({ roles: [] }, 'local-order-1'), /Heureka order read requires admin role/);
+  }
+
+  {
     const { service, calls } = makeService();
     const result = await service.ingestOrder({
       externalOrderId: 'H-1001',

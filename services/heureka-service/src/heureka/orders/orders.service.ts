@@ -1,9 +1,18 @@
-import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { CatalogClientService, LoggerService, OrderClientService, PrismaService, WarehouseClientService } from '@heureka/shared';
 import { HeurekaOperationEventService } from '../operations/operation-event.service';
 
 const CHANNEL = 'heureka';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const HEUREKA_ORDER_READ_ADMIN_ROLES = new Set([
+  'global:superadmin',
+  'global:platform_admin',
+  'app:heureka-service:admin',
+  'app:heureka:admin',
+  'heureka:admin',
+]);
+
+type OrdersReadActor = { roles?: string[] | null };
 
 @Injectable()
 export class HeurekaOrdersService {
@@ -111,7 +120,8 @@ export class HeurekaOrdersService {
     return this.toResponse(updated, { forwarded: true, orderId: centralOrder.id, replay: false, itemCount: request.items.length });
   }
 
-  async listOrders(forwarded?: string) {
+  async listOrders(actor: OrdersReadActor, forwarded?: string) {
+    this.assertOrderReadAdmin(actor);
     return this.prisma.heurekaOrder.findMany({
       where: forwarded === undefined ? undefined : { forwarded: forwarded === 'true' },
       orderBy: { createdAt: 'desc' },
@@ -119,10 +129,18 @@ export class HeurekaOrdersService {
     });
   }
 
-  async getOrder(id: string) {
+  async getOrder(actor: OrdersReadActor, id: string) {
+    this.assertOrderReadAdmin(actor);
     const order = await this.prisma.heurekaOrder.findUnique({ where: { id } });
     if (!order) throw new NotFoundException(`Heureka order ${id} not found`);
     return order;
+  }
+
+  private assertOrderReadAdmin(actor: OrdersReadActor): void {
+    const roles = Array.isArray(actor?.roles) ? actor.roles : [];
+    if (!roles.some((role) => HEUREKA_ORDER_READ_ADMIN_ROLES.has(role))) {
+      throw new ForbiddenException("Heureka order read requires admin role");
+    }
   }
 
   private async normalizeRequest(input: any) {

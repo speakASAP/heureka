@@ -416,7 +416,7 @@ export class DashboardService {
   }
 
   async listOrders(user: DashboardUser, query: Record<string, string>) {
-    this.normalizeUser(user);
+    this.requireAdmin(user);
     const limit = this.clampNumber(Number(query.limit), 25, 1, 100);
     const status = this.optionalString(query.status);
     const where = status && status !== 'all' ? { status } : {};
@@ -443,7 +443,7 @@ export class DashboardService {
   }
 
   async getOrderDetail(user: DashboardUser, id: string) {
-    this.normalizeUser(user);
+    this.requireAdmin(user);
     const order = await this.prisma.heurekaOrder.findUnique({ where: { id } });
     if (!order) {
       throw new NotFoundException(`Heureka order ${id} not found`);
