@@ -2,12 +2,12 @@
 
 ```yaml
 id: VAL-GOAL-25-W4-HEUREKA-CONSUMER
-status: validated-source-ready
+status: validated-current-main-live-route-proven
 created: 2026-07-03
 repository: /home/ssf/Documents/Github/heureka
-branch: codex/goal-25-w4e-heureka-consumer-validation
-heureka_source_commit: 824465e
-catalog_origin_main: f453811
+branch: main after merge
+heureka_source_commit: 1cf0f32
+catalog_origin_main: 7d77fd4
 catalog_base_requirement: origin/main contains 877bf98
 catalog_policy: catalog.product_quality.v1
 ```
@@ -30,13 +30,13 @@ Coding Prompt: Catalog Goal 25 W4E Heureka consumer validation worker; remote-on
 
 Code: no source change required in this W4E pass. Existing Heureka implementation was validated in `shared/clients/catalog-client.service.ts`, `services/heureka-service/src/heureka/feed/feed-readiness.ts`, `services/heureka-service/src/heureka/feed/feed.service.ts`, `services/heureka-service/src/heureka/dashboard/dashboard.service.ts`, and dashboard/public readiness views.
 
-Validation: focused self-tests, shared build, Heureka service build, verifier syntax check, and `git diff --check` passed.
+Validation: focused self-tests, shared build, Heureka service build, verifier syntax check, `git diff --check`, and live protected Catalog route probes passed on current main.
 
-State Update: W4E report added for Goal 25 consumer evidence; source remains ready for integration/deploy decision.
+State Update: W4E report merged into main; source is validated and already deployed in the live Heureka image.
 
 ## Catalog Contract Evidence
 
-- Verified `/home/ssf/Documents/Github/catalog-microservice` `origin/main` at `f453811`.
+- Verified `/home/ssf/Documents/Github/catalog-microservice` `origin/main` at `7d77fd4`.
 - Verified `877bf98` is an ancestor of Catalog `origin/main`.
 - Catalog exposes `GET /api/products/review/quality` and `GET /api/products/review/quality/export` from `src/products/products.controller.ts`.
 - Catalog product-quality items expose `policyId`, `canActivate`, `blockingIssues`, `blockingMissingFields`, `nextAction`, and pagination/total data from the review queue contract.
@@ -55,11 +55,11 @@ State Update: W4E report added for Goal 25 consumer evidence; source remains rea
 
 ```bash
 ssh alfares 'cd /home/ssf/Documents/Github/catalog-microservice && git rev-parse --short origin/main && git merge-base --is-ancestor 877bf98 origin/main && echo CATALOG_BASE_OK'
-# f453811
+# 7d77fd4
 # CATALOG_BASE_OK
 
 ssh alfares 'cd /home/ssf/Documents/Github/heureka && git status --short --branch'
-# ## codex/goal-25-w4e-heureka-consumer-validation
+# ## main...origin/main after merge refresh
 
 ssh alfares 'cd /home/ssf/Documents/Github/heureka && git diff --check'
 # PASS
@@ -88,8 +88,8 @@ ssh alfares 'cd /home/ssf/Documents/Github/heureka && LOGGING_SERVICE_URL=http:/
 
 ## Blockers And Caveats
 
-- `[UNKNOWN: live deployed Catalog product-quality route status]`; this worker validated source and contract shape, not live pod traffic.
-- `[UNKNOWN: live deployed Heureka image includes this source]`; no deployment was requested or run in this W4E pass.
+- Live Catalog product-quality routes are deployed and protected: unauthenticated probes to `https://catalog.alfares.cz/api/products/review/quality` and `/export` returned HTTP `401`, not `404`.
+- Live Heureka deployment is `localhost:5000/heureka-service:1cf0f32`, matching the validated current source commit; no new deploy was required for this docs-only merge.
 - `[MISSING: per-product Catalog quality endpoint]`; Heureka correctly uses the stable review queue contract and bounded lookup fallback instead of inventing a per-product Catalog field/route.
 
 ## Result
@@ -98,4 +98,16 @@ Heureka is already source-implemented and validated for Goal 25 W4E consumer beh
 
 ## Commit And Push Status
 
-Pending at report creation; this report is the only W4E branch file change.
+Merged into `main` and refreshed after current-main validation. This report is docs-only; no runtime mutation or deploy was required because the validated Heureka source is already live at `1cf0f32`.
+
+
+## 2026-07-03 Current Main Refresh
+
+Refresh evidence after merging the validation branch into current `main`:
+
+- Heureka `main` before docs merge was `1cf0f32`; `824465e` is an ancestor of current `main`.
+- Catalog `origin/main` was `7d77fd4`; `877bf98` remains an ancestor of Catalog `origin/main`.
+- Current Heureka source still contains `getProductQualityReviewForProduct`, `catalog_quality_unavailable`, `hasCatalogQualityBlockers`, and `verify:heureka-blocked-product-lanes`.
+- Live deployments: `catalog-microservice:e62bc63` ready `1/1`; `heureka-service:1cf0f32` ready `1/1`.
+- Live protected route probes: `/api/products/review/quality` returned HTTP `401`; `/api/products/review/quality/export` returned HTTP `401`. This proves route presence and auth protection without reading product data.
+- Current-main validation rerun passed: `git diff --check`, Catalog client self-test, feed-readiness self-test, feed-preview-readonly self-test, dashboard-list-products self-test, verifier syntax check, shared build, and Heureka service build.
