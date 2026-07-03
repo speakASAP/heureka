@@ -38,9 +38,10 @@ function verifySourceContracts() {
   assert.match(orderClient, /process\.env\.ORDERS_MICROSERVICE_URL/);
   assert.match(orderClient, /process\.env\.ORDER_SERVICE_URL/);
   assert.match(orderClient, /process\.env\.ORDERS_SERVICE_TOKEN/);
+  assert.match(orderClient, /process\.env\.ORDERS_INTERNAL_SERVICE_TOKEN/);
+  assert.match(orderClient, /process\.env\.JWT_TOKEN/);
   assert.match(orderClient, /process\.env\.HEUREKA_INTERNAL_SERVICE_TOKEN/);
   assert.match(orderClient, /process\.env\.INTERNAL_SERVICE_TOKEN/);
-  assert.match(orderClient, /process\.env\.JWT_TOKEN/);
   assert.match(orderClient, /headers\['x-internal-service-token'\]/);
   assert.match(orderClient, /headers\['x-service-name'\] = 'heureka-service'/);
 
@@ -100,9 +101,10 @@ const report = {
   source: {
     orderClientContract: 'orders.create.v1',
     orderServiceUrlFallbacks: ['ORDERS_SERVICE_URL', 'ORDERS_MICROSERVICE_URL', 'ORDER_SERVICE_URL'],
-    orderAuthSources: ['ORDERS_SERVICE_TOKEN', 'HEUREKA_INTERNAL_SERVICE_TOKEN', 'INTERNAL_SERVICE_TOKEN', 'JWT_TOKEN'],
+    orderAuthSources: ['ORDERS_SERVICE_TOKEN', 'ORDERS_INTERNAL_SERVICE_TOKEN', 'JWT_TOKEN', 'HEUREKA_INTERNAL_SERVICE_TOKEN', 'INTERNAL_SERVICE_TOKEN'],
     manifestEnvRefs: {
       ORDER_SERVICE_URL: 'heureka-config',
+      ORDERS_INTERNAL_SERVICE_TOKEN: 'optional explicit Orders token',
       HEUREKA_INTERNAL_SERVICE_TOKEN: 'catalog-microservice-secret/CATALOG_INTERNAL_SERVICE_TOKEN',
       JWT_TOKEN: 'heureka-service-secret/JWT_TOKEN',
       WAREHOUSE_SERVICE_TOKEN: 'warehouse-microservice-secret/CLIPLOT_WAREHOUSE_SERVICE_TOKEN',
@@ -125,12 +127,13 @@ if (runtimeMode) {
     'ORDERS_MICROSERVICE_URL',
     'JWT_TOKEN',
     'ORDERS_SERVICE_TOKEN',
+    'ORDERS_INTERNAL_SERVICE_TOKEN',
     'HEUREKA_INTERNAL_SERVICE_TOKEN',
     'INTERNAL_SERVICE_TOKEN',
     'WAREHOUSE_SERVICE_TOKEN',
   ];
   const ordersUrl = firstPresent(['ORDERS_SERVICE_URL', 'ORDERS_MICROSERVICE_URL', 'ORDER_SERVICE_URL']);
-  const internalToken = firstPresent(['HEUREKA_INTERNAL_SERVICE_TOKEN', 'INTERNAL_SERVICE_TOKEN', 'JWT_TOKEN']);
+  const internalToken = firstPresent(['ORDERS_INTERNAL_SERVICE_TOKEN', 'JWT_TOKEN', 'HEUREKA_INTERNAL_SERVICE_TOKEN', 'INTERNAL_SERVICE_TOKEN']);
   const warehouseToken = firstPresent(['WAREHOUSE_SERVICE_TOKEN', 'JWT_TOKEN', 'SERVICE_TOKEN']);
   report.runtime = {
     envPresence: envPresence(runtimeKeys),
