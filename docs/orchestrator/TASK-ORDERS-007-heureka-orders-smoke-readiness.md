@@ -304,3 +304,21 @@ Role: integration validator.
 - Coding Prompt: keep this as a verifier and documentation update only; no order ingestion, Orders mutation, Warehouse reservation, or cleanup flow is run in this pass.
 - Code: `scripts/verify_heureka_orders_runtime_readiness.js` plus `npm run verify:heureka-orders-runtime-readiness`.
 - Validation: source mode passes; pod runtime mode returned `contractVersion=heureka-orders-runtime-readiness.v1`, `readOnly=true`, `mutations=[]`, `resolvedOrdersUrlSource=ORDER_SERVICE_URL`, `resolvedInternalTokenSource=HEUREKA_INTERNAL_SERVICE_TOKEN`, and `resolvedWarehouseTokenSource=WAREHOUSE_SERVICE_TOKEN`. Only env presence and string lengths were printed; no token values were printed.
+
+## 2026-07-03 Orders Token Priority And Rendered Lifecycle API Proof
+
+Role: channel integration owner.
+
+Intent Preservation Chain:
+
+- Vision: Heureka orders must create canonical Orders through the reliable Orders/Warehouse reservation path and dashboard order views must use current central lifecycle data.
+- Goal Impact: closes the Heureka Orders create 401 and stale/unknown dashboard data blocker at the API data-source layer.
+- System: Heureka `OrderClientService`, Catalog preflight, Orders create/readback, Warehouse reservation, Auth short-lived cleanup identity.
+- Feature: Heureka synthetic create/replay/reservation/cleanup plus dashboard orders-list lifecycle proof.
+- Task: keep Catalog-to-Heureka token path intact while making outbound Heureka-to-Orders calls use the Heureka service token.
+- Execution Plan: add Catalog auth headers to the smoke preflight, prefer `ORDERS_INTERNAL_SERVICE_TOKEN` / `JWT_TOKEN` before `HEUREKA_INTERNAL_SERVICE_TOKEN` in the Orders client, deploy, run preflight, run live smoke, cleanup, then probe `/heureka/dashboard/orders-list`.
+- Coding Prompt: do not print token values, raw order rows, customer PII, DB rows, provider payloads, payment refs, tracking values, or raw DOM.
+- Code: commit `a0dbb24` deployed as `localhost:5000/heureka-service:a0dbb24` and `localhost:5000/heureka-api-gateway:a0dbb24`.
+- Validation: preflight missing none; live smoke first POST `201`, replay POST `201`, stable order id true, Orders readback `200`, reservation statuses `reserved`, cleanup status `200`, cleanup cancelled true, missing none; dashboard orders-list HTTP `200`, total `6`, returned `6`, centralStatusCounts `available=4`, `missingId=2`, `stale=2`, `unknown=2`, and non-stale sample lifecycle `cancelled` with reservation/warehouse handoff `cancelled`.
+
+Remaining optional gate: `[MISSING: browser DOM render capture for visible Heureka lifecycle labels if API-backed dashboard data proof is not sufficient]`.

@@ -245,9 +245,10 @@ export class OrderClientService {
     }
 
     const internalToken = (
+      process.env.ORDERS_INTERNAL_SERVICE_TOKEN ||
+      process.env.JWT_TOKEN ||
       process.env.HEUREKA_INTERNAL_SERVICE_TOKEN ||
       process.env.INTERNAL_SERVICE_TOKEN ||
-      process.env.JWT_TOKEN ||
       ''
     ).trim();
     if (internalToken) {

@@ -65,6 +65,15 @@ function warehouseHeaders() {
   return token ? { Authorization: bearer(token.value) } : {};
 }
 
+function catalogHeaders() {
+  const token = firstPresent(['CATALOG_INTERNAL_SERVICE_TOKEN', 'HEUREKA_INTERNAL_SERVICE_TOKEN', 'INTERNAL_SERVICE_TOKEN', 'JWT_TOKEN']);
+  if (!token) return {};
+  return {
+    'x-internal-service-token': token.value,
+    'x-service-name': 'heureka-service',
+  };
+}
+
 function internalHeaders() {
   const token = firstPresent(['HEUREKA_INTERNAL_SERVICE_TOKEN', 'INTERNAL_SERVICE_TOKEN', 'JWT_TOKEN']);
   if (!token) return null;
@@ -266,7 +275,9 @@ async function collectPreflight() {
     missing.push(`[MISSING: public.${table}]`);
   }
 
-  const catalog = await fetchJson(`${catalogServiceUrl}/api/products/${productId}`).catch((error) => ({
+  const catalog = await fetchJson(`${catalogServiceUrl}/api/products/${productId}`, {
+    headers: catalogHeaders(),
+  }).catch((error) => ({
     status: 0,
     ok: false,
     errorSummary: redact(error.message),
