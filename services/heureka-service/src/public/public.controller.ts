@@ -1237,7 +1237,7 @@ export class PublicController {
     var status = filter && filter.value ? filter.value : 'all';
     return Promise.all([
       api('/heureka/dashboard/summary'),
-      api('/heureka/dashboard/orders?limit=50&status=' + encodeURIComponent(status))
+      api('/heureka/dashboard/orders-list?limit=50&status=' + encodeURIComponent(status))
     ]).then(function (results) {
       renderMetrics(results[0].data);
       renderOrders(results[1].data);

@@ -54,6 +54,7 @@ async function main(): Promise<void> {
   assertIncludes(ordersPage, 'ORDER_STATUS_POLL_MS = 30000', 'orders polling interval');
   assertIncludes(ordersPage, 'document.addEventListener(\'visibilitychange\'', 'orders polling visibility pause');
   assertIncludes(ordersPage, 'data-order-detail', 'orders detail action');
+  assertIncludes(ordersPage, "api('/heureka/dashboard/orders-list?limit=50&status='", 'orders list API refresh');
   assertIncludes(ordersPage, 'api(\'/heureka/dashboard/orders/\'', 'orders detail API refresh');
   assertIncludes(ordersPage, 'Select an order to inspect central lifecycle, payment and delivery status.', 'orders detail panel copy');
 

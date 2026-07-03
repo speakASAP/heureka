@@ -73,6 +73,8 @@ function verifySourceContracts() {
     assert.ok(publicController.includes(stage), `Missing dashboard lifecycle label coverage: ${stage}`);
   }
   assert.ok(publicController.includes('ORDER_STATUS_POLL_MS = 30000'), 'Dashboard orders polling must remain enabled');
+  assert.ok(publicController.includes("api('/heureka/dashboard/orders-list?limit=50&status='"), 'Dashboard order list must use protected orders-list API alias');
+  assert.ok(publicController.includes("api('/heureka/dashboard/orders/'"), 'Dashboard order detail must keep canonical protected detail API');
   assert.ok(publicController.includes("document.addEventListener('visibilitychange'"), 'Dashboard orders polling must pause/resume on visibility changes');
 
   for (const required of [

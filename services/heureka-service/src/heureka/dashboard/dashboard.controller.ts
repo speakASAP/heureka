@@ -72,6 +72,11 @@ export class DashboardController {
     return { success: true, data: await this.dashboardService.listOrders(req.user, query) };
   }
 
+  @Get('orders-list')
+  async ordersList(@Req() req: any, @Query() query: Record<string, string>) {
+    return { success: true, data: await this.dashboardService.listOrders(req.user, query) };
+  }
+
   @Get('orders/:id')
   async order(@Req() req: any, @Param('id') id: string) {
     return { success: true, data: await this.dashboardService.getOrderDetail(req.user, id) };
