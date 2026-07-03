@@ -30,6 +30,16 @@ Sensitive output: source verifiers print no token values, customer payloads, ord
 - `npm run verify:heureka-orders-runtime-readiness` -> PASS, source mode, blockers empty.
 - `npm --prefix services/heureka-service run build` -> PASS.
 
+
+## 2026-07-03 Route Collision Fix Deployment
+
+- Fixed the protected dashboard order list route collision by adding `GET /heureka/dashboard/orders-list` while keeping public shell `/dashboard/orders` and detail hydration `/heureka/dashboard/orders/:id` unchanged.
+- Dashboard polling now uses `/heureka/dashboard/orders-list?limit=50&status=...`, so the public shell global-prefix exclusion no longer hides the protected list API.
+- Commit/deploy: `e4b97fe fix: add heureka dashboard orders api alias`, images `localhost:5000/heureka-service:e4b97fe` and `localhost:5000/heureka-api-gateway:e4b97fe`, both ready/available `1/1`.
+- Validation before deploy: public dashboard route self-test, `npm run verify:heureka-orders-runtime-readiness`, `services/heureka-service` build, and `git diff --check`.
+- Runtime smoke after deploy: `/dashboard/orders` HTTP 200, `/api/health` HTTP 200, unauthenticated `/api/heureka/dashboard/orders-list?limit=5&status=all` HTTP 401, in-pod authenticated `/heureka/dashboard/orders-list?limit=5&status=all` HTTP 200 with aggregate `total=4`, `orders=4`, `centralStatusCounts.available=0`, `missingId=1`, `stale=4`, `unknown=4`. Token value and raw order rows were not printed.
+- Remaining gate: `[MISSING: approved Heureka live row linked to a current non-stale canonical Orders lifecycle stage, then rendered customer/admin lifecycle proof]`.
+
 ## Remaining Gates
 
 - [MISSING: browser smoke] `/dashboard/orders`, `/dashboard/orders/:id`, and `/dashboard/admin/users` were not browser-smoked in a live deployed environment in this source-only slice.
