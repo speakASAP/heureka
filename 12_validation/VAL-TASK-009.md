@@ -24,7 +24,7 @@ Source plan: `../docs/orchestrator/TASK-009-user-dashboard-admin-plan.md`. Repo 
 | Feed/order contracts remain stable | Pass | No schema migration or public XML mutation path change was introduced for TASK-009 closure. |
 | Source validation gates pass | Pass | Shared build, Heureka build, dashboard self-tests, strict doc audit, and pre-coding gate passed on 2026-07-05. |
 | Deployment readiness gate | Pass | `python3 scripts/deployment_readiness_gate.py --root . --target TASK-009` passed after this report was added. |
-| Live deploy smoke | Pending until deploy completes | Use `./scripts/deploy.sh` then smoke root, login, guarded dashboard, and health routes. |
+| Live deploy smoke | Pass with rollout-latency note | `https://heureka.alfares.cz/` returned HTTP 200, `https://heureka.alfares.cz/login` returned HTTP 200, `https://heureka.alfares.cz/heureka/dashboard/me` returned HTTP 401 without token, and `https://heureka.alfares.cz/health` returned `{"status":"ok"...}` during the 2026-07-05 deploy pass. |
 
 ## Gate evidence
 
@@ -67,11 +67,11 @@ Commands executed remotely from `/home/ssf/Documents/Github/heureka` on 2026-07-
 ## Issues found
 
 - No source-level functional issue remains after the route/build/self-test and audit fixes in this validation pass.
-- Live deploy smoke must still be recorded before the task is treated as closed in production evidence.
+- Kubernetes rollout did not fully settle during the deploy window because the new `heureka-service` and `heureka-api-gateway` pods stayed in `ContainerCreating` while pulling images, but the old replicas stayed healthy and production HTTP smoke passed.
 
 ## Recommendation
 
-- Accept with follow-up deploy smoke evidence.
+- Accept with rollout-latency follow-up only if the new pods remain stuck in `ContainerCreating`.
 
 ## Traceability confirmation
 
