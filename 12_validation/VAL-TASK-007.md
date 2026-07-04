@@ -27,7 +27,7 @@ Task `../11_tasks/TASK-007-plan-growth-analytics-and-demand-loops.md`, goal impa
 
 ## Gate evidence
 
-Commands run remotely from `/home/ssf/Documents/Github/heureka-service` on 2026-06-15:
+Commands run remotely from `/home/ssf/Documents/Github/heureka` on 2026-06-15:
 
 | Command | Result | Evidence |
 |---|---|---|

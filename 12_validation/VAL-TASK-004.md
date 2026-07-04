@@ -55,7 +55,7 @@ Task `../11_tasks/TASK-004-design-catalog-feed-readiness-action.md`, feature `..
 
 ## Gate evidence
 
-Commands executed remotely from `/home/ssf/Documents/Github/heureka-service` on 2026-06-15:
+Commands executed remotely from `/home/ssf/Documents/Github/heureka` on 2026-06-15:
 
 ```bash
 python3 scripts/strict_doc_audit.py --format markdown --fail-on-issues

@@ -28,7 +28,7 @@ Task `../11_tasks/TASK-006-plan-stock-order-profit-feedback-loop.md`, goal impac
 
 ## Gate evidence
 
-Executed remotely on 2026-06-13 from `/home/ssf/Documents/Github/heureka-service`:
+Executed remotely on 2026-06-13 from `/home/ssf/Documents/Github/heureka`:
 
 | Command | Result | Evidence |
 |---|---|---|
@@ -46,7 +46,7 @@ Scope: Documentation-only gate review; no runtime, schema, public XML, order/pay
 
 Current decision: Blocked for runtime implementation. Warehouse, flipflop, orders, payments, and supplier owners have not approved the required read-only contracts or synthetic examples. Existing boundaries remain valid for planning only.
 
-Gate evidence rerun remotely on 2026-06-15 from `/home/ssf/Documents/Github/heureka-service`:
+Gate evidence rerun remotely on 2026-06-15 from `/home/ssf/Documents/Github/heureka`:
 
 | Command | Result | Evidence |
 |---|---|---|

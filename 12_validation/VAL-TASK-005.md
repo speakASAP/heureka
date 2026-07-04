@@ -29,7 +29,7 @@ Task `../11_tasks/TASK-005-define-ai-feed-optimization-contract.md`, goal impact
 
 ## Gate evidence
 
-Commands to run from `/home/ssf/Documents/Github/heureka-service`:
+Commands to run from `/home/ssf/Documents/Github/heureka`:
 
 ```bash
 python3 scripts/strict_doc_audit.py --format markdown --fail-on-issues
@@ -37,7 +37,7 @@ python3 scripts/pre_coding_gate.py --root .
 python3 scripts/deployment_readiness_gate.py --root . --target TASK-005
 ```
 
-Observed evidence from `/home/ssf/Documents/Github/heureka-service` on 2026-06-13:
+Observed evidence from `/home/ssf/Documents/Github/heureka` on 2026-06-13:
 
 | Command | Result | Evidence |
 |---|---|---|

@@ -2,7 +2,7 @@
 
 Date: 2026-07-01
 Repository: `heureka-service`
-Status: implementation in progress
+Status: completed
 
 ## Vision
 
@@ -158,3 +158,9 @@ Next follow-up should define Catalog Heureka marketplace fields. Candidate field
 - `includeInFeed`
 
 Only after that contract exists should Catalog add `heureka` to marketplace fields, content previews, and product publication channels.
+
+## Completion Evidence
+
+- Source validation: `git diff --check`, `npm --prefix shared run build`, `npx ts-node services/heureka-service/src/public/public-dashboard-routes.self-test.ts`, `npx ts-node services/heureka-service/src/heureka/dashboard/dashboard-list-products.self-test.ts`, `npx ts-node services/heureka-service/src/heureka/dashboard/dashboard-operations-history.self-test.ts`, `npx ts-node services/heureka-service/src/heureka/dashboard/dashboard-order-read-model.self-test.ts`, `LOGGING_SERVICE_URL=http://logging-microservice:3367 npm --prefix services/heureka-service run build`, `npm run ips:audit`, and `npm run ips:pre-coding`.
+- Runtime integration: deploy from remote `main` and smoke `https://heureka.alfares.cz/`, `https://heureka.alfares.cz/login`, `https://heureka.alfares.cz/heureka/dashboard/me`, and `https://heureka.alfares.cz/health`.
+- Outcome: hosted Auth public routes, guarded dashboard API, feed controls, product listing/admin surfaces, and admin statistics are implemented without a schema migration.

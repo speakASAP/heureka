@@ -158,6 +158,12 @@ nodes:
 - id: VAL-TASK-008
   type: ValidationReport
   path: 12_validation/VAL-TASK-008.md
+- id: TASK-009
+  type: Task
+  path: docs/orchestrator/TASK-009-user-dashboard-admin-plan.md
+- id: VAL-TASK-009
+  type: ValidationReport
+  path: 12_validation/VAL-TASK-009.md
 - id: PROMPT-TASK-002
   type: CodingPrompt
   path: 19_prompts/PROMPT-TASK-002.md
@@ -423,3 +429,7 @@ edges:
 - from: PROMPT-TASK-003
   type: included_in_context
   to: CTX-TASK-003
+
+- from: VAL-TASK-009
+  type: validates
+  to: TASK-009
