@@ -21,7 +21,8 @@
     "verify:heureka-owner-data-template": "node scripts/verify_heureka_owner_data_template.js",
     "verify:task-010-completion-audit": "node scripts/verify_task_010_completion_audit.js",
     "verify:heureka-bundle-publication-policy": "node scripts/verify_heureka_bundle_publication_policy.js",
-    "verify:orders-lifecycle-ui": "npm run verify:heureka-orders-runtime-readiness"
+    "verify:orders-lifecycle-ui": "npm run verify:heureka-orders-runtime-readiness",
+    "verify:business-health-heureka-channel-contract": "node scripts/verify-business-health-heureka-channel-contract.js"
   },
   "dependencies": {
     "@nestjs/axios": "^3.0.1",

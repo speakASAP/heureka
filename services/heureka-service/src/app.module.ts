@@ -11,6 +11,7 @@ import { PublicController } from './public/public.controller';
 import { DashboardModule } from './heureka/dashboard/dashboard.module';
 import { PrismaModule, LoggerModule, HealthModule, RabbitMQModule } from '@heureka/shared';
 import { HealthController } from './health/health.controller';
+import { BusinessHealthModule } from './business-health/business-health.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { HealthController } from './health/health.controller';
     FeedModule,
     HeurekaOrdersModule,
     DashboardModule,
+    BusinessHealthModule,
   ],
   controllers: [HealthController, PublicController],
 })
