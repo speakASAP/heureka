@@ -1,4 +1,5 @@
-import { Controller, Get, Header } from '@nestjs/common';
+import { Controller, Get, Header, StreamableFile } from '@nestjs/common';
+import { FAVICON_ICO } from './favicon.assets';
 
 type PublicPage = 'landing' | 'login' | 'register' | 'callback' | 'dashboard';
 
@@ -8,6 +9,13 @@ export class PublicController {
   @Header('Content-Type', 'text/html; charset=utf-8')
   landing() {
     return this.renderPage('landing', 'Alfares Heureka | Automatizace prodeje na Heurece', this.landingBody());
+  }
+
+  @Get('favicon.ico')
+  @Header('Content-Type', 'image/x-icon')
+  @Header('Cache-Control', 'public, max-age=604800')
+  favicon() {
+    return new StreamableFile(FAVICON_ICO);
   }
 
   @Get('login')
