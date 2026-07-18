@@ -29,7 +29,7 @@ function verifySourceContracts() {
   const orderClient = read('shared/clients/order-client.service.ts');
   const deployment = read('k8s/deployment.yaml');
   const configmap = read('k8s/configmap.yaml');
-  const contract = read('23_documentation_contracts/HEUREKA_ORDER_INGESTION_CONTRACT.md');
+  const contract = read('docs/23_documentation_contracts/HEUREKA_ORDER_INGESTION_CONTRACT.md');
   const smokeDoc = read('docs/orchestrator/TASK-ORDERS-007-heureka-orders-smoke-readiness.md');
   const publicController = read('services/heureka-service/src/public/public.controller.ts');
 

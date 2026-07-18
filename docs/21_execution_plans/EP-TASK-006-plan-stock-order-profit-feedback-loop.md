@@ -125,7 +125,7 @@ Strict documentation audit and pre-coding gate for planning. Runtime implementat
 
 ## Validation Plan
 
-Capture command output summaries in `12_validation/` or `reports/validation/` without secrets or production raw data.
+Capture command output summaries in `docs/12_validation/` or `reports/validation/` without secrets or production raw data.
 
 ## Gate Commands
 

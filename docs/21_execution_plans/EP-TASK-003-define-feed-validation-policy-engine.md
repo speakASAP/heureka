@@ -117,7 +117,7 @@ Strict documentation audit and pre-coding gate for planning. Runtime implementat
 
 ## Validation Plan
 
-Capture command output summaries in `12_validation/VAL-TASK-003.md` and generated gate reports under `reports/validation/`.
+Capture command output summaries in `docs/12_validation/VAL-TASK-003.md` and generated gate reports under `reports/validation/`.
 
 ## Gate Commands
 

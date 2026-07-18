@@ -96,11 +96,11 @@ export class BusinessHealthService {
         '[MISSING: approved reconciliation rule that maps Warehouse/Catalog availability to Heureka feed sellable quantity without feed regeneration or external mutation side effects]',
       ],
       intentChain: {
-        vision: '01_vision/[MISSING: Heureka business health vision artifact]',
-        goalImpact: '22_goal_impact/[MISSING: business-health Heureka channel readback goal impact]',
-        system: '04_systems/[MISSING: Heureka service system artifact]',
-        feature: '10_features/[MISSING: Heureka business-health channel readback feature artifact]',
-        task: '11_tasks/[MISSING: Heureka business-health channel readback task]',
+        vision: 'docs/01_vision/[MISSING: Heureka business health vision artifact]',
+        goalImpact: 'docs/22_goal_impact/[MISSING: business-health Heureka channel readback goal impact]',
+        system: 'docs/04_systems/[MISSING: Heureka service system artifact]',
+        feature: 'docs/10_features/[MISSING: Heureka business-health channel readback feature artifact]',
+        task: 'docs/11_tasks/[MISSING: Heureka business-health channel readback task]',
         executionPlan: 'docs/orchestrator/2026-07-06-heureka-business-health-handoff.md',
         codingPrompt: 'Codex prompt 2026-07-06 Heureka service-owned business-health evidence envelope',
         code: [

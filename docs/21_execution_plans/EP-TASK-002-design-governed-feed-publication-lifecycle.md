@@ -68,7 +68,7 @@ This plan has one primary runtime goal, but it can be split into parallel lanes 
 |---|---|---|---|---|---|
 | Lifecycle/status model | Yes | Pre-coding gate and schema ownership decision | TASK-007 event taxonomy and TASK-008 probes | `prisma/schema.prisma`, feed lifecycle module | Define lifecycle states and persistence without changing public XML fields beyond approved scope. |
 | XML validation and exclusion tests | Yes | Current feed builder behavior | TASK-003 policy integration | Feed tests and validation helpers | Prove valid XML, zero-stock exclusion, sensitive-field exclusion, and timing with synthetic data. |
-| Validation evidence and docs | Yes | Gate commands available | Completion checklist | `12_validation/`, `reports/validation/`, task trackers | Capture non-secret validation evidence and document deviations. |
+| Validation evidence and docs | Yes | Gate commands available | Completion checklist | `docs/12_validation/`, `reports/validation/`, task trackers | Capture non-secret validation evidence and document deviations. |
 
 ## Blockers And Coordination
 
@@ -112,7 +112,7 @@ Strict documentation audit and pre-coding gate for planning. Runtime implementat
 
 ## Validation Plan
 
-Capture command output summaries in `12_validation/` or `reports/validation/` without secrets or production raw data.
+Capture command output summaries in `docs/12_validation/` or `reports/validation/` without secrets or production raw data.
 
 ## Gate Commands
 

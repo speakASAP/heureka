@@ -10,7 +10,7 @@ completeness_level: complete
 upstream:
   - ../21_execution_plans/EP-TASK-002-design-governed-feed-publication-lifecycle.md
 context_package:
-  - ../20_context_packages/CTX-TASK-002.md
+  - ../13_context_packages/CTX-TASK-002.md
 ```
 
 ## Prompt

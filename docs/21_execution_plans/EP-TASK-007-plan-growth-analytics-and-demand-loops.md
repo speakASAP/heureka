@@ -116,7 +116,7 @@ Strict documentation audit and pre-coding gate for planning. Runtime implementat
 
 ## Validation Plan
 
-Capture command output summaries in `12_validation/` or `reports/validation/` without secrets or production raw data. Event taxonomy validation must prove synthetic examples, forbidden-field exclusion, deterministic idempotency keys, snapshot-hash replay stability, and blocked marketing/leads writes before runtime implementation.
+Capture command output summaries in `docs/12_validation/` or `reports/validation/` without secrets or production raw data. Event taxonomy validation must prove synthetic examples, forbidden-field exclusion, deterministic idempotency keys, snapshot-hash replay stability, and blocked marketing/leads writes before runtime implementation.
 
 ## Gate Commands
 

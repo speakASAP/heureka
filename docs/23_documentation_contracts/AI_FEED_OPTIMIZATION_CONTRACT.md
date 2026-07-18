@@ -342,7 +342,7 @@ AI cannot directly mutate public XML under this contract because:
 
 | Workstream | Status | Owner role | Allowed files | Forbidden files | Handoff |
 |---|---|---|---|---|---|
-| Contract definition | ready now | Agent D | `23_documentation_contracts/AI_FEED_OPTIMIZATION_CONTRACT.md`, TASK-005 docs, validation report | feed service runtime, schema, secrets | Deliver versioned contract and validation evidence. |
+| Contract definition | ready now | Agent D | `docs/23_documentation_contracts/AI_FEED_OPTIMIZATION_CONTRACT.md`, TASK-005 docs, validation report | feed service runtime, schema, secrets | Deliver versioned contract and validation evidence. |
 | Runtime suggestion storage | dependency-gated | Integration owner with Agent A coordination | To be defined by reviewed plan | `prisma/schema.prisma` until coordinated | Requires schema ownership and migration plan. |
 | Review UI/API | dependency-gated | Future operator tooling owner | To be defined by reviewed plan | Direct AI-to-public-feed mutation path | Requires approved review API and auth model. |
 | Feed application | final integration | TASK-002/feed lifecycle owner | Feed lifecycle files after approval | Autonomous AI publication | Consume only reviewed and validation-passed suggestions. |

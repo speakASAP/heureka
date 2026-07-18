@@ -10,7 +10,7 @@ completeness_level: complete
 upstream:
   - ../21_execution_plans/EP-TASK-004-design-catalog-feed-readiness-action.md
 context_package:
-  - ../20_context_packages/CTX-TASK-004.md
+  - ../13_context_packages/CTX-TASK-004.md
 ```
 
 ## Role

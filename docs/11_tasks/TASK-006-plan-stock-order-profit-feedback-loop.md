@@ -57,7 +57,7 @@ No local order/payment/supplier ownership, no internal values in public XML, no 
 - [ ] Invariant impacts are explicit.
 - [ ] Sensitive-data handling is testable.
 - [ ] Contract and replay risks are documented.
-- [ ] Validation evidence is captured under `12_validation/` or `reports/validation/` before closure.
+- [ ] Validation evidence is captured under `docs/12_validation/` or `reports/validation/` before closure.
 
 ## Required Context
 

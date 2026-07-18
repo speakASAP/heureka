@@ -57,7 +57,7 @@ No direct product editing in catalog, no automatic feed inclusion, no runtime wr
 - [x] Invariant impacts are explicit.
 - [x] Sensitive-data handling is testable.
 - [x] Contract and replay risks are documented.
-- [x] Validation evidence is captured under `12_validation/` or `reports/validation/` before closure.
+- [x] Validation evidence is captured under `docs/12_validation/` or `reports/validation/` before closure.
 
 ## Required Context
 

@@ -1,187 +1,187 @@
 nodes:
 - id: VISION
   type: Vision
-  path: 01_vision/VISION.md
+  path: docs/01_vision/VISION.md
 - id: CONSTITUTION
   type: Constitution
-  path: 00_constitution/CONSTITUTION.md
+  path: docs/00_constitution/CONSTITUTION.md
 - id: ROADMAP-HEUREKA-SERVICE
   type: Roadmap
-  path: 08_roadmap/ROADMAP.md
+  path: docs/08_roadmap/ROADMAP.md
 - id: SYS-001
   type: System
-  path: 04_systems/SYS-001-feed-generation.md
+  path: docs/04_systems/SYS-001-feed-generation.md
 - id: SUB-001
   type: Subsystem
-  path: 05_subsystems/SUB-001-feed-builder.md
+  path: docs/05_subsystems/SUB-001-feed-builder.md
 - id: ADR-001
   type: ADR
-  path: 07_decisions/ADR-001-use-nestjs-postgres-kubernetes.md
+  path: docs/07_decisions/ADR-001-use-nestjs-postgres-kubernetes.md
 - id: INTEGRATIONS-HEUREKA-SERVICE
   type: Operations
-  path: 16_operations/INTEGRATIONS.md
+  path: docs/16_operations/INTEGRATIONS.md
 - id: FEAT-001
   type: Feature
-  path: 10_features/FEAT-001-feed-generation-governance.md
+  path: docs/10_features/FEAT-001-feed-generation-governance.md
 - id: TASK-001
   type: Task
-  path: 11_tasks/TASK-001-implement-ips-governance-bootstrap.md
+  path: docs/11_tasks/TASK-001-implement-ips-governance-bootstrap.md
 - id: EP-TASK-001
   type: ExecutionPlan
-  path: 21_execution_plans/EP-TASK-001.md
+  path: docs/21_execution_plans/EP-TASK-001.md
 - id: GOAL-IMPACT-TASK-001
   type: GoalImpact
-  path: 22_goal_impact/GOAL-IMPACT-TASK-001.md
+  path: docs/22_goal_impact/GOAL-IMPACT-TASK-001.md
 - id: VAL-TASK-001-ips-bootstrap
   type: ValidationReport
-  path: 12_validation/VAL-TASK-001-ips-bootstrap.md
+  path: docs/12_validation/VAL-TASK-001-ips-bootstrap.md
 - id: MS-002
   type: Milestone
-  path: 09_milestones/MS-002-feed-publication-foundation.md
+  path: docs/09_milestones/MS-002-feed-publication-foundation.md
 - id: MS-003
   type: Milestone
-  path: 09_milestones/MS-003-catalog-feed-readiness.md
+  path: docs/09_milestones/MS-003-catalog-feed-readiness.md
 - id: MS-004
   type: Milestone
-  path: 09_milestones/MS-004-intelligent-feed-optimization.md
+  path: docs/09_milestones/MS-004-intelligent-feed-optimization.md
 - id: MS-005
   type: Milestone
-  path: 09_milestones/MS-005-stock-order-profit-feedback.md
+  path: docs/09_milestones/MS-005-stock-order-profit-feedback.md
 - id: MS-006
   type: Milestone
-  path: 09_milestones/MS-006-growth-analytics-and-demand-loops.md
+  path: docs/09_milestones/MS-006-growth-analytics-and-demand-loops.md
 - id: MS-007
   type: Milestone
-  path: 09_milestones/MS-007-operations-trust-and-scale.md
+  path: docs/09_milestones/MS-007-operations-trust-and-scale.md
 - id: FEAT-002
   type: Feature
-  path: 10_features/FEAT-002-governed-feed-publication-lifecycle.md
+  path: docs/10_features/FEAT-002-governed-feed-publication-lifecycle.md
 - id: FEAT-003
   type: Feature
-  path: 10_features/FEAT-003-feed-validation-policy-engine.md
+  path: docs/10_features/FEAT-003-feed-validation-policy-engine.md
 - id: FEAT-004
   type: Feature
-  path: 10_features/FEAT-004-catalog-feed-readiness-action.md
+  path: docs/10_features/FEAT-004-catalog-feed-readiness-action.md
 - id: FEAT-005
   type: Feature
-  path: 10_features/FEAT-005-ai-assisted-feed-optimization.md
+  path: docs/10_features/FEAT-005-ai-assisted-feed-optimization.md
 - id: FEAT-006
   type: Feature
-  path: 10_features/FEAT-006-stock-order-profit-feedback-loop.md
+  path: docs/10_features/FEAT-006-stock-order-profit-feedback-loop.md
 - id: FEAT-007
   type: Feature
-  path: 10_features/FEAT-007-growth-analytics-and-demand-loops.md
+  path: docs/10_features/FEAT-007-growth-analytics-and-demand-loops.md
 - id: FEAT-008
   type: Feature
-  path: 10_features/FEAT-008-operations-trust-and-scale.md
+  path: docs/10_features/FEAT-008-operations-trust-and-scale.md
 - id: TASK-002
   type: Task
-  path: 11_tasks/TASK-002-design-governed-feed-publication-lifecycle.md
+  path: docs/11_tasks/TASK-002-design-governed-feed-publication-lifecycle.md
 - id: EP-TASK-002
   type: ExecutionPlan
-  path: 21_execution_plans/EP-TASK-002-design-governed-feed-publication-lifecycle.md
+  path: docs/21_execution_plans/EP-TASK-002-design-governed-feed-publication-lifecycle.md
 - id: GOAL-IMPACT-TASK-002
   type: GoalImpact
-  path: 22_goal_impact/GOAL-IMPACT-TASK-002.md
+  path: docs/22_goal_impact/GOAL-IMPACT-TASK-002.md
 - id: VAL-TASK-002
   type: ValidationReport
-  path: 12_validation/VAL-TASK-002.md
+  path: docs/12_validation/VAL-TASK-002.md
 - id: TASK-003
   type: Task
-  path: 11_tasks/TASK-003-define-feed-validation-policy-engine.md
+  path: docs/11_tasks/TASK-003-define-feed-validation-policy-engine.md
 - id: EP-TASK-003
   type: ExecutionPlan
-  path: 21_execution_plans/EP-TASK-003-define-feed-validation-policy-engine.md
+  path: docs/21_execution_plans/EP-TASK-003-define-feed-validation-policy-engine.md
 - id: GOAL-IMPACT-TASK-003
   type: GoalImpact
-  path: 22_goal_impact/GOAL-IMPACT-TASK-003.md
+  path: docs/22_goal_impact/GOAL-IMPACT-TASK-003.md
 - id: VAL-TASK-003
   type: ValidationReport
-  path: 12_validation/VAL-TASK-003.md
+  path: docs/12_validation/VAL-TASK-003.md
 - id: TASK-004
   type: Task
-  path: 11_tasks/TASK-004-design-catalog-feed-readiness-action.md
+  path: docs/11_tasks/TASK-004-design-catalog-feed-readiness-action.md
 - id: EP-TASK-004
   type: ExecutionPlan
-  path: 21_execution_plans/EP-TASK-004-design-catalog-feed-readiness-action.md
+  path: docs/21_execution_plans/EP-TASK-004-design-catalog-feed-readiness-action.md
 - id: GOAL-IMPACT-TASK-004
   type: GoalImpact
-  path: 22_goal_impact/GOAL-IMPACT-TASK-004.md
+  path: docs/22_goal_impact/GOAL-IMPACT-TASK-004.md
 - id: VAL-TASK-004
   type: ValidationReport
-  path: 12_validation/VAL-TASK-004.md
+  path: docs/12_validation/VAL-TASK-004.md
 - id: TASK-005
   type: Task
-  path: 11_tasks/TASK-005-define-ai-feed-optimization-contract.md
+  path: docs/11_tasks/TASK-005-define-ai-feed-optimization-contract.md
 - id: EP-TASK-005
   type: ExecutionPlan
-  path: 21_execution_plans/EP-TASK-005-define-ai-feed-optimization-contract.md
+  path: docs/21_execution_plans/EP-TASK-005-define-ai-feed-optimization-contract.md
 - id: GOAL-IMPACT-TASK-005
   type: GoalImpact
-  path: 22_goal_impact/GOAL-IMPACT-TASK-005.md
+  path: docs/22_goal_impact/GOAL-IMPACT-TASK-005.md
 - id: VAL-TASK-005
   type: ValidationReport
-  path: 12_validation/VAL-TASK-005.md
+  path: docs/12_validation/VAL-TASK-005.md
 - id: TASK-006
   type: Task
-  path: 11_tasks/TASK-006-plan-stock-order-profit-feedback-loop.md
+  path: docs/11_tasks/TASK-006-plan-stock-order-profit-feedback-loop.md
 - id: EP-TASK-006
   type: ExecutionPlan
-  path: 21_execution_plans/EP-TASK-006-plan-stock-order-profit-feedback-loop.md
+  path: docs/21_execution_plans/EP-TASK-006-plan-stock-order-profit-feedback-loop.md
 - id: GOAL-IMPACT-TASK-006
   type: GoalImpact
-  path: 22_goal_impact/GOAL-IMPACT-TASK-006.md
+  path: docs/22_goal_impact/GOAL-IMPACT-TASK-006.md
 - id: VAL-TASK-006
   type: ValidationReport
-  path: 12_validation/VAL-TASK-006.md
+  path: docs/12_validation/VAL-TASK-006.md
 - id: TASK-007
   type: Task
-  path: 11_tasks/TASK-007-plan-growth-analytics-and-demand-loops.md
+  path: docs/11_tasks/TASK-007-plan-growth-analytics-and-demand-loops.md
 - id: EP-TASK-007
   type: ExecutionPlan
-  path: 21_execution_plans/EP-TASK-007-plan-growth-analytics-and-demand-loops.md
+  path: docs/21_execution_plans/EP-TASK-007-plan-growth-analytics-and-demand-loops.md
 - id: GOAL-IMPACT-TASK-007
   type: GoalImpact
-  path: 22_goal_impact/GOAL-IMPACT-TASK-007.md
+  path: docs/22_goal_impact/GOAL-IMPACT-TASK-007.md
 - id: VAL-TASK-007
   type: ValidationReport
-  path: 12_validation/VAL-TASK-007.md
+  path: docs/12_validation/VAL-TASK-007.md
 - id: TASK-008
   type: Task
-  path: 11_tasks/TASK-008-plan-operations-trust-and-scale.md
+  path: docs/11_tasks/TASK-008-plan-operations-trust-and-scale.md
 - id: EP-TASK-008
   type: ExecutionPlan
-  path: 21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md
+  path: docs/21_execution_plans/EP-TASK-008-plan-operations-trust-and-scale.md
 - id: GOAL-IMPACT-TASK-008
   type: GoalImpact
-  path: 22_goal_impact/GOAL-IMPACT-TASK-008.md
+  path: docs/22_goal_impact/GOAL-IMPACT-TASK-008.md
 - id: VAL-TASK-008
   type: ValidationReport
-  path: 12_validation/VAL-TASK-008.md
+  path: docs/12_validation/VAL-TASK-008.md
 - id: TASK-009
   type: Task
   path: docs/orchestrator/TASK-009-user-dashboard-admin-plan.md
 - id: VAL-TASK-009
   type: ValidationReport
-  path: 12_validation/VAL-TASK-009.md
+  path: docs/12_validation/VAL-TASK-009.md
 - id: PROMPT-TASK-002
   type: CodingPrompt
-  path: 19_prompts/PROMPT-TASK-002.md
+  path: docs/14_prompts/PROMPT-TASK-002.md
 - id: CTX-TASK-002
   type: ContextPackage
-  path: 20_context_packages/CTX-TASK-002.md
+  path: docs/13_context_packages/CTX-TASK-002.md
 - id: PROMPT-TASK-003
   type: CodingPrompt
-  path: 19_prompts/PROMPT-TASK-003.md
+  path: docs/14_prompts/PROMPT-TASK-003.md
 - id: CTX-TASK-003
   type: ContextPackage
-  path: 20_context_packages/CTX-TASK-003.md
+  path: docs/13_context_packages/CTX-TASK-003.md
 - id: PROMPT-TASK-004
   type: CodingPrompt
-  path: 19_prompts/PROMPT-TASK-004.md
+  path: docs/14_prompts/PROMPT-TASK-004.md
 - id: CTX-TASK-004
   type: ContextPackage
-  path: 20_context_packages/CTX-TASK-004.md
+  path: docs/13_context_packages/CTX-TASK-004.md
 edges:
 - from: ROADMAP-HEUREKA-SERVICE
   type: derives_from

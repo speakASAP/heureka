@@ -57,7 +57,7 @@ No Kubernetes changes in planning task, no secret exposure, no media dependency 
 - [ ] Invariant impacts are explicit.
 - [ ] Sensitive-data handling is testable.
 - [ ] Contract and replay risks are documented.
-- [ ] Validation evidence is captured under `12_validation/` or `reports/validation/` before closure.
+- [ ] Validation evidence is captured under `docs/12_validation/` or `reports/validation/` before closure.
 
 ## Required Context
 

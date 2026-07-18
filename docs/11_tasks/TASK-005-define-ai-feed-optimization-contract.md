@@ -57,7 +57,7 @@ No autonomous public feed mutation, no raw production prompts, no unreviewed pri
 - [x] Invariant impacts are explicit.
 - [x] Sensitive-data handling is testable through locked redaction fields and synthetic examples.
 - [x] Contract and replay risks are documented in `../23_documentation_contracts/AI_FEED_OPTIMIZATION_CONTRACT.md`.
-- [x] Validation evidence is captured under `12_validation/` or `reports/validation/` before closure.
+- [x] Validation evidence is captured under `docs/12_validation/` or `reports/validation/` before closure.
 
 Coding remains blocked because the execution plan is still `draft` and runtime storage/schema changes require Agent A coordination.
 

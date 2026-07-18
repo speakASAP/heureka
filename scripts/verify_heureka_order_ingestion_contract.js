@@ -6,7 +6,7 @@ const root = path.resolve(__dirname, '..');
 const controller = fs.readFileSync(path.join(root, 'services/heureka-service/src/heureka/orders/orders.controller.ts'), 'utf8');
 const service = fs.readFileSync(path.join(root, 'services/heureka-service/src/heureka/orders/orders.service.ts'), 'utf8');
 const client = fs.readFileSync(path.join(root, 'shared/clients/order-client.service.ts'), 'utf8');
-const contract = fs.readFileSync(path.join(root, '23_documentation_contracts/HEUREKA_ORDER_INGESTION_CONTRACT.md'), 'utf8');
+const contract = fs.readFileSync(path.join(root, 'docs/23_documentation_contracts/HEUREKA_ORDER_INGESTION_CONTRACT.md'), 'utf8');
 
 assert.match(controller, /@Post\('ingest'\)/);
 assert.match(controller, /@UseGuards\(HeurekaOrderIngestionGuard\)/);

@@ -66,7 +66,7 @@ This plan started as a contract/readiness lane while TASK-002 and TASK-003 stabi
 
 | Goal | Can start in parallel | Depends on | Blocks | Primary files | Agent handoff |
 |---|---|---|---|---|---|
-| Readiness contract | Completed | Catalog boundary and invariants | Catalog/client integration | `23_documentation_contracts/CATALOG_FEED_READINESS_CONTRACT.md` | Synthetic examples and no catalog mutation authority are defined. |
+| Readiness contract | Completed | Catalog boundary and invariants | Catalog/client integration | `docs/23_documentation_contracts/CATALOG_FEED_READINESS_CONTRACT.md` | Synthetic examples and no catalog mutation authority are defined. |
 | Blocker mapping | Completed | TASK-003 vocabulary | TASK-007 analytics payloads | `feed-readiness.ts`, validation examples | Every blocker maps to owner service, remediation hint, and public-safe reason. |
 | Runtime endpoint | Completed | TASK-002/TASK-003 interfaces | Completion | `feed.controller.ts`, `feed.service.ts` | Endpoint added after policy vocabulary stabilized and file ownership stayed in this thread. |
 
@@ -118,7 +118,7 @@ Strict documentation audit and pre-coding gate for planning. Runtime implementat
 
 ## Validation Plan
 
-Capture command output summaries in `12_validation/` or `reports/validation/` without secrets or production raw data.
+Capture command output summaries in `docs/12_validation/` or `reports/validation/` without secrets or production raw data.
 
 ## Gate Commands
 
