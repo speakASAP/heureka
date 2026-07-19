@@ -12,8 +12,9 @@ export class PublicController {
     return this.renderPage('landing', 'Alfares Heureka | Automatizace prodeje na Heurece', this.landingBody());
   }
 
-  // Oba moduly leží pod /ui/, protože consent-banner.js importuje
-  // './consent-core.js' a prohlížeč to řeší vůči stejnému prefixu.
+  // Oba moduly leží pod /heureka/ui/: main.ts nastavuje globální prefix
+  // 'heureka', takže cesta v <script> jej musí obsahovat. Relativní import
+  // './consent-core.js' uvnitř banneru se pak vyřeší proti stejnému prefixu.
   @Get('ui/consent-core.js')
   @Header('Content-Type', 'application/javascript; charset=utf-8')
   @Header('Cache-Control', 'public, max-age=3600')
@@ -115,7 +116,7 @@ export class PublicController {
     ${body}
     <script>${this.authScript(page)}</script>
     <script type="module">
-      import { mountConsentBanner } from '/ui/consent-banner.js';
+      import { mountConsentBanner } from '/heureka/ui/consent-banner.js';
       mountConsentBanner({
         version: 'alfares-consent-v1',
         policyUrl: 'https://alfares.cz/cs/legal/cookie-policy',
