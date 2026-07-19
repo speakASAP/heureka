@@ -54,6 +54,14 @@ COPY --from=builder /app/scripts ./scripts
 # Copy entire shared package (source + compiled dist + node_modules for @heureka/shared)
 COPY --from=builder /app/shared ./shared
 
+# Drop @nestjs duplicates from the shared package so exactly one copy is loaded.
+# Two copies mean two distinct HttpException classes: anything thrown inside
+# @heureka/shared (the catalog/order/warehouse client services) fails Nest's
+# `instanceof HttpException` check and is reported to clients as a 500 instead
+# of the intended 400/404. Node resolves these up to /app/node_modules,
+# which carries a superset (axios, common, config, core, platform-express).
+RUN rm -rf /app/shared/node_modules/@nestjs
+
 # Ensure @heureka/shared is properly resolved in node_modules
 RUN mkdir -p /app/node_modules/@heureka && ln -sf ../../shared /app/node_modules/@heureka/shared
 
