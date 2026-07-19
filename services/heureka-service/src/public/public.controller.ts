@@ -1,5 +1,6 @@
 import { Controller, Get, Header, StreamableFile } from '@nestjs/common';
 import { FAVICON_ICO } from './favicon.assets';
+import { consentBannerSource, consentCoreSource } from './consent.assets';
 
 type PublicPage = 'landing' | 'login' | 'register' | 'callback' | 'dashboard';
 
@@ -9,6 +10,22 @@ export class PublicController {
   @Header('Content-Type', 'text/html; charset=utf-8')
   landing() {
     return this.renderPage('landing', 'Alfares Heureka | Automatizace prodeje na Heurece', this.landingBody());
+  }
+
+  // Oba moduly leží pod /ui/, protože consent-banner.js importuje
+  // './consent-core.js' a prohlížeč to řeší vůči stejnému prefixu.
+  @Get('ui/consent-core.js')
+  @Header('Content-Type', 'application/javascript; charset=utf-8')
+  @Header('Cache-Control', 'public, max-age=3600')
+  consentCore(): string {
+    return consentCoreSource;
+  }
+
+  @Get('ui/consent-banner.js')
+  @Header('Content-Type', 'application/javascript; charset=utf-8')
+  @Header('Cache-Control', 'public, max-age=3600')
+  consentBanner(): string {
+    return consentBannerSource;
   }
 
   @Get('favicon.ico')
@@ -97,6 +114,19 @@ export class PublicController {
   <body data-page="${page}">
     ${body}
     <script>${this.authScript(page)}</script>
+    <script type="module">
+      import { mountConsentBanner } from '/ui/consent-banner.js';
+      mountConsentBanner({
+        version: 'alfares-consent-v1',
+        policyUrl: 'https://alfares.cz/cs/legal/cookie-policy',
+        text: {
+          title: 'Cookies a úložiště',
+          disclosureBody: 'Ukládáme jen údaje nezbytné pro přihlášení a chod služby. Nepoužíváme analytické ani marketingové cookies.',
+          acknowledge: 'Rozumím',
+          policyLabel: 'Zásady cookies',
+        },
+      });
+    </script>
   </body>
 </html>`;
   }
