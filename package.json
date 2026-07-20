@@ -5,6 +5,9 @@
   "private": true,
   "scripts": {
     "start:dev": "concurrently -n \"API-GW,HEUREKA\" -c \"blue,yellow\" \"cd services/api-gateway && npm run start:dev\" \"cd services/heureka-service && npm run start:dev\"",
+    "typecheck": "npm run typecheck:shared && npm run typecheck:service",
+    "typecheck:shared": "./shared/node_modules/.bin/tsc --noEmit -p tsconfig.json",
+    "typecheck:service": "./services/heureka-service/node_modules/.bin/tsc --noEmit -p services/heureka-service/tsconfig.json",
     "ips:audit": "python3 scripts/strict_doc_audit.py --format markdown --fail-on-issues",
     "ips:pre-coding": "python3 scripts/pre_coding_gate.py --root .",
     "ips:deployment-readiness": "python3 scripts/deployment_readiness_gate.py --root .",
