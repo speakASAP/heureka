@@ -34,7 +34,7 @@ spec:
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: database-credentials
+                  name: heureka-database-url-secret
                   key: DB_PASSWORD
             - name: JWT_SECRET
               valueFrom:

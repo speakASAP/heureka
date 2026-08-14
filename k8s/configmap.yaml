@@ -31,7 +31,7 @@ data:
   # LOG_LEVEL: "info"
   DB_HOST: "db-server-postgres"
   DB_PORT: "5432"
-  DB_USER: "dbadmin"
+  DB_USER: "heureka"
   DB_NAME: "heureka"
   DB_SYNC: "false"
   DB_AUTO_CREATE: "true"
