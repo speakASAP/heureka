@@ -244,6 +244,9 @@ export class OrderClientService {
       headers.Authorization = bearer.startsWith('Bearer ') ? bearer : `Bearer ${bearer}`;
     }
 
+    // Cutover fallback: the shared static credential, where orders derives identity
+    // from x-service-name rather than from the token. Retired once this lane is
+    // verified on the Bearer path; loud on every use so it cannot rot unnoticed.
     const internalToken = (
       process.env.ORDERS_INTERNAL_SERVICE_TOKEN ||
       process.env.JWT_TOKEN ||
@@ -252,6 +255,15 @@ export class OrderClientService {
       ''
     ).trim();
     if (internalToken) {
+      if (!bearer) {
+        this.logger.error(
+          'ORDERS_SERVICE_TOKEN is unset; falling back to the shared static internal '
+            + 'header for orders-microservice. This credential is header-authenticated '
+            + 'and scheduled for retirement — set ORDERS_SERVICE_TOKEN.',
+          undefined,
+          'OrderClient',
+        );
+      }
       headers['x-internal-service-token'] = internalToken;
       headers['x-service-name'] = 'heureka-service';
     }
