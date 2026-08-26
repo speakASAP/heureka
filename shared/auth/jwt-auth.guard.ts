@@ -9,7 +9,6 @@ import {
   CanActivate,
   ExecutionContext,
 } from '@nestjs/common';
-import * as jwt from 'jsonwebtoken';
 import { AuthService } from './auth.service';
 import { verifyAuthToken } from './jwt-verifier';
 import { AuthUser } from './auth.interface';
@@ -57,7 +56,7 @@ export class JwtAuthGuard implements CanActivate {
         // Verify token signature and expiration locally against auth's public key (RS256)
         decoded = await verifyAuthToken(token);
         
-        // Check if token is expired (jwt.verify already does this, but double-check)
+        // Check if token is expired (verifyAuthToken already does this, but double-check)
         if (decoded.exp && decoded.exp < Date.now() / 1000) {
           throw this.unauthorized('Token expired');
         }
