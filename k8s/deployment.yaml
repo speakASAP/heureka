@@ -46,11 +46,15 @@ spec:
                 secretKeyRef:
                   name: heureka-service-secret
                   key: JWT_TOKEN
+            # Must be heureka's own credential: orders-microservice compares this
+            # value byte-for-byte against secret/prod/heureka-service#JWT_TOKEN.
+            # It previously pointed at catalog's token, so the comparison could
+            # never match and order forwarding returned 401 in production.
             - name: HEUREKA_INTERNAL_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: catalog-microservice-secret
-                  key: CATALOG_INTERNAL_SERVICE_TOKEN
+                  name: heureka-service-secret
+                  key: JWT_TOKEN
             - name: WAREHOUSE_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:
