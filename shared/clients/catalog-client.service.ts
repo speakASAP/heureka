@@ -66,6 +66,33 @@ export class CatalogClientService {
   }
 
   /**
+   * A failed catalog lookup must never be reported as "no such product/price".
+   *
+   * Returning null/empty behind a logger.warn is why a 26-day warehouse stock
+   * outage went unnoticed elsewhere in this ecosystem: an auth or transport
+   * failure was indistinguishable from a genuinely absent result. For
+   * searchProducts specifically, this feed's whole purpose (BUSINESS.md: XML
+   * product feed generation) depends on catalog counts — a swallowed 401
+   * silently shrinks the feed to zero with no signal. Only a 404 means
+   * "no such record" — everything else must throw.
+   */
+  private rethrowCatalogLookupFailure(error: unknown, subject: string, operation: string): never {
+    const status = (error as any)?.response?.status;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    this.logger.error(
+      `${operation} failed against catalog-microservice: ${subject}, `
+        + `httpStatus=${status ?? 'n/a'}, error=${errorMessage}`,
+      errorStack,
+      'CatalogClient',
+    );
+    throw new HttpException(
+      `${operation} failed: ${errorMessage}`,
+      status || HttpStatus.BAD_GATEWAY,
+    );
+  }
+
+  /**
    * Get product by ID
    */
   async getProductById(productId: string, context: CatalogRequestContext = {}): Promise<any> {
@@ -101,9 +128,13 @@ export class CatalogClientService {
       }
       return response.data.data;
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.warn(`Product not found by SKU ${sku}: ${errorMessage}`, 'CatalogClient');
-      return null;
+      // A lookup failure is not "no such SKU": returning null for both made an
+      // auth or transport failure indistinguishable from a genuinely unknown
+      // product. Only a 404 means "no such SKU".
+      if ((error as any)?.response?.status === HttpStatus.NOT_FOUND) {
+        return null;
+      }
+      this.rethrowCatalogLookupFailure(error, `sku=${sku}`, 'Product lookup by SKU');
     }
   }
 
@@ -137,10 +168,11 @@ export class CatalogClientService {
         limit: response.data.pagination?.limit || 20,
       };
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const errorStack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(`Failed to search products: ${errorMessage}`, errorStack, 'CatalogClient');
-      return { items: [], total: 0, page: 1, limit: 20 };
+      // Was `return { items: [], ... }` on any error. This backs both the
+      // dashboard product count/list and the Heureka feed's product source —
+      // a 401 indistinguishable from "no matching products" silently reports
+      // zero catalog products instead of surfacing an outage.
+      this.rethrowCatalogLookupFailure(error, 'search', 'Product search');
     }
   }
 
@@ -195,8 +227,17 @@ export class CatalogClientService {
       );
       return response.data.data;
     } catch (error: unknown) {
-      this.logger.warn(`Pricing not found for product ${productId}`, 'CatalogClient');
-      return null;
+      // Was `return null` on any error. The feed generator (FeedService)
+      // treats null pricing as "no PRICE_VAT field", which fails
+      // hasRequiredPublicFeedFields and drops the product from the feed with
+      // NO log line at this layer — the outer per-product catch never fires
+      // because nothing threw. An auth/transport failure must surface, not
+      // silently shrink the public feed. Only a 404 means "no pricing record".
+      if ((error as any)?.response?.status === HttpStatus.NOT_FOUND) {
+        this.logger.warn(`Pricing not found for product ${productId}`, 'CatalogClient');
+        return null;
+      }
+      this.rethrowCatalogLookupFailure(error, `productId=${productId}`, 'Pricing lookup');
     }
   }
 
@@ -210,8 +251,15 @@ export class CatalogClientService {
       );
       return response.data.data || [];
     } catch (error: unknown) {
-      this.logger.warn(`Media not found for product ${productId}`, 'CatalogClient');
-      return [];
+      // Was `return []` on any error. Feed generation reads IMGURL from this
+      // result (buildHeurekaFeedFields) — a missing image can also fail the
+      // required-fields check and silently drop the product from the public
+      // feed. Only a 404 means "no media for this product".
+      if ((error as any)?.response?.status === HttpStatus.NOT_FOUND) {
+        this.logger.warn(`Media not found for product ${productId}`, 'CatalogClient');
+        return [];
+      }
+      this.rethrowCatalogLookupFailure(error, `productId=${productId}`, 'Media lookup');
     }
   }
 
