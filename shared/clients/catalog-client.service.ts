@@ -551,12 +551,21 @@ export class CatalogClientService {
     };
   }
 
+  /**
+   * HEUREKA_INTERNAL_SERVICE_TOKEN and JWT_TOKEN were removed from this chain on
+   * 2026-08-27: both resolve to the shared a2880693 value, and catalog rejects it
+   * ("Missing or invalid Authorization header" — catalog wants a Bearer token, not
+   * this static header). Keeping them made a missing credential look like a
+   * configured one and produced a 401 that named the wrong cause.
+   *
+   * NOTE: CATALOG_INTERNAL_SERVICE_TOKEN is currently unset in production, so this
+   * lane returns null and its callers surface the missing credential. That is a
+   * pre-existing outage, not one introduced here — see plan section 6z.
+   */
   private getCatalogInternalServiceHeaders(): Record<string, string> | null {
     const internalToken = (
       process.env.CATALOG_INTERNAL_SERVICE_TOKEN ||
-      process.env.HEUREKA_INTERNAL_SERVICE_TOKEN ||
       process.env.INTERNAL_SERVICE_TOKEN ||
-      process.env.JWT_TOKEN ||
       ''
     ).trim();
 

@@ -247,10 +247,12 @@ export class OrderClientService {
     // Cutover fallback: the shared static credential, where orders derives identity
     // from x-service-name rather than from the token. Retired once this lane is
     // verified on the Bearer path; loud on every use so it cannot rot unnoticed.
+    // JWT_TOKEN and HEUREKA_INTERNAL_SERVICE_TOKEN are deliberately NOT in this
+    // chain: both resolve to the shared a2880693 value, which orders stopped
+    // accepting from any caller when header-chosen identity was closed. Leaving
+    // them here would keep the value mounted for a path that can only 401.
     const internalToken = (
       process.env.ORDERS_INTERNAL_SERVICE_TOKEN ||
-      process.env.JWT_TOKEN ||
-      process.env.HEUREKA_INTERNAL_SERVICE_TOKEN ||
       process.env.INTERNAL_SERVICE_TOKEN ||
       ''
     ).trim();

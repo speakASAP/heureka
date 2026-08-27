@@ -27,9 +27,11 @@ export class WarehouseClientService {
   }
 
   private requestOptions() {
+    // JWT_TOKEN is deliberately NOT in this chain: it holds the shared a2880693
+    // value, and warehouse rejects it. Reaching it could only turn a missing
+    // per-pair credential into a confusing 401 from warehouse.
     const token = (
       process.env.WAREHOUSE_SERVICE_TOKEN ||
-      process.env.JWT_TOKEN ||
       process.env.SERVICE_TOKEN ||
       ''
     ).trim();
@@ -38,7 +40,7 @@ export class WarehouseClientService {
       // Sending the request unauthenticated would surface as a confusing 401
       // from warehouse rather than as the misconfiguration it actually is.
       this.logger.error(
-        'No warehouse credential configured (WAREHOUSE_SERVICE_TOKEN / JWT_TOKEN / SERVICE_TOKEN); refusing to call warehouse-microservice unauthenticated',
+        'No warehouse credential configured (WAREHOUSE_SERVICE_TOKEN / SERVICE_TOKEN); refusing to call warehouse-microservice unauthenticated',
         undefined,
         'WarehouseClient',
       );
