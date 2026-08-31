@@ -1,0 +1,46 @@
+{
+  "report": "wave-0-v1-registry-validation",
+  "repository": "heureka",
+  "status": "validated",
+  "generated_at": "2026-08-31T04:25:04Z",
+  "checks": [
+    {
+      "name": "validate-repository-profile",
+      "command": "python3 /home/ssf/Documents/Github/shared/scripts/validate-repository-profile.py --root . --json",
+      "exit_code": 0,
+      "ok": true,
+      "error_count": 0,
+      "warning_count": 0,
+      "artifact_count": 0,
+      "collectable_path_count": 9
+    },
+    {
+      "name": "build-artifact-index-check",
+      "command": "python3 /home/ssf/Documents/Github/shared/scripts/build-artifact-index.py --root . --check --json",
+      "exit_code": 0,
+      "ok": true,
+      "error_count": 0,
+      "warning_count": 0,
+      "artifact_count": 0
+    },
+    {
+      "name": "json-parse",
+      "command": "python3 inline parser for STATE.json, docs/registry/REPOSITORY_PROFILE.json, docs/registry/ARTIFACT_INDEX.json, reports/validation/2026-08-30-wave-0-v1-registry-validation.json",
+      "exit_code": 0,
+      "ok": true
+    },
+    {
+      "name": "safety-pattern-scan",
+      "command": "rg scan for placeholders and disallowed external-reference tokens in changed Wave 0 metadata/report files",
+      "exit_code": 0,
+      "ok": true,
+      "matches": 0
+    },
+    {
+      "name": "git-diff-check",
+      "command": "git diff --check",
+      "exit_code": 0,
+      "ok": true
+    }
+  ]
+}

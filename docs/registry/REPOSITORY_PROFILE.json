@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0",
+  "repository": "heureka",
+  "profile": "ips-full",
+  "project_registration": {
+    "runlayer_project_slug": null,
+    "runlayer_permalink": null,
+    "status": "unmapped",
+    "warning": "No verified canonical RunLayer mapping for this repository."
+  },
+  "collectable_paths": [
+    "AGENTS.md",
+    "AGENT_OPERATIONS.md",
+    "BUSINESS.md",
+    "SYSTEM.md",
+    "TASKS.md",
+    "STATE.json",
+    "docs/registry/REPOSITORY_PROFILE.json",
+    "docs/registry/ARTIFACT_INDEX.json",
+    "reports/validation/2026-08-30-wave-0-v1-registry-validation.json"
+  ],
+  "excluded_path_patterns": [
+    ".env*",
+    "**/secrets/**",
+    "**/*.pem",
+    "**/node_modules/**",
+    "**/coverage/**",
+    "**/*.key",
+    "**/*.log",
+    "**/logs/**",
+    "**/*.dump",
+    "**/dumps/**",
+    "**/*.sql",
+    "**/runtime/**",
+    "dist/**",
+    "k8s/**",
+    "prisma/**",
+    "scripts/**",
+    "services/**",
+    "shared/**"
+  ],
+  "owners": {
+    "business_intent": "human-managed",
+    "technical_system": "service-owner",
+    "planning_state": "coordinator-managed",
+    "integration": "service-owner",
+    "registry_contract": "coordinator-managed"
+  }
+}
