@@ -1,25 +1,19 @@
-# Tasks: heureka-service
-
-## Backlog
-<!-- Human-managed -->
-- TASK-005 Define AI Feed Optimization Contract
-- TASK-006 Plan Stock Order Profit Feedback Loop
-- TASK-007 Plan Growth Analytics And Demand Loops
-- TASK-008 Plan Operations Trust And Scale
+# Tasks
 
 ## Active
-<!-- Coordinator-maintained -->
-- None.
+- complete IPS adoption profile for heureka
+
+## Ready next
+- validate the Heureka XML generation flow against the live feed contract
+- check product readiness handling for zero-stock exclusion cases
+
+## Blocked
+- no active blockers beyond completing the final onboarding documentation and validation evidence
 
 ## Completed
-<!-- Coordinator-append-only -->
-- 2026-04-05 documentation-standard-applied
-- 2026-06-13 TASK-001 IPS governance bootstrap validation passed
-- 2026-06-13 TASK-002 governed feed publication lifecycle validated
-- 2026-06-13 TASK-003 feed validation policy engine validated
-- 2026-06-15 TASK-004 catalog feed readiness action implemented and validated
-- 2026-07-05 TASK-009 hosted-Auth dashboard/admin section validated, deployed, and closed
+- real service boundary documented according to the repo’s actual catalog and stock dependencies
+- Heureka feed and marketplace integration scope preserved without overclaiming product or payment ownership
+- project adoption profile scaffolded and aligned to the shared IPS standard
 
-## Project Completion Marker
-
-- 2026-07-05: Project marked completed/frozen after TASK-009 validation and deploy. There are no active goals, active plans, open tasks, blockers, or pending human/AI actions. Do not ask for a new goal during routine status checks unless the owner explicitly creates one.
+## Handoff
+- ongoing feed and marketplace checks should remain scoped to Heureka integration behavior and not expand into catalog or warehouse domain ownership

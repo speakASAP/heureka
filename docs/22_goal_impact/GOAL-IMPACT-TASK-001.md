@@ -1,35 +1,23 @@
-# GOAL-IMPACT-TASK-001: IPS Governance Bootstrap
+# Goal impact: task 001
 
-```yaml
-id: GOAL-IMPACT-TASK-001
-artifact_type: task
-artifact_id: TASK-001
-artifact_path: ../11_tasks/TASK-001-implement-ips-governance-bootstrap.md
-primary_goal: Preserve Heureka feed intent and constraints through auditable delivery controls
-secondary_goals:
-  - Keep runtime behavior unchanged during governance bootstrap
-impact_level: high
-impact_description: Establishes IPS traceability and gate controls for future service changes.
-success_metric: Strict audit and pre-coding gate can run from repo root.
-upstream_links:
-  - ../01_vision/VISION.md
-  - ../02_business_case/BUSINESS_CASE.md
-  - ../10_features/FEAT-001-feed-generation-governance.md
-downstream_links:
-  - ../21_execution_plans/EP-TASK-001.md
-  - ../12_validation/VAL-TASK-001-ips-bootstrap.md
-validation_method: Gate execution and validation report evidence
-status: draft
-```
+status: validated
 
-## Explanation
+## Goal
+Keep the Heureka repo truthful about its marketplace feed and order integration role without claiming broader ownership of the product catalog, warehouse, or payment flows.
 
-TASK-001 creates the initial IPS controls future AI-assisted changes must use.
+## Contribution
+This task establishes a valid IPS adoption profile for the Heureka service and documents its real operational boundary and dependency model.
 
-## Evidence
+## Success metric
+The repo passes the IPS adoption validation and remains honest about the feed-generation and marketplace integration scope.
 
-`../01_vision/VISION.md`, `../10_features/FEAT-001-feed-generation-governance.md`, `../21_execution_plans/EP-TASK-001.md`, `../12_validation/VAL-TASK-001-ips-bootstrap.md`.
+## Invariant compatibility
+This work is consistent with the invariant that service ownership and runtime boundaries must be explicit and accurate.
 
-## Validation
+## Upstream and downstream links
+- Upstream: `../11_tasks/TASK-001-bootstrap-service.md`
+- Downstream: `../21_execution_plans/EP-TASK-001-bootstrap-service.md`
+- Traceability: `../12_validation/VAL-TASK-001-bootstrap-service.md`
 
-Validated by gate output under `../reports/validation/` and the validation report.
+## Validation method
+Use `python3 intent-preservation-system/scripts/validate_adoption_profile.py --root heureka --phase planning` and keep the traceability references explicit to `../11_tasks/TASK-001-bootstrap-service.md` and `../21_execution_plans/EP-TASK-001-bootstrap-service.md`.

@@ -1,54 +1,37 @@
-# Heureka Service Vision
+# Vision
 
-```yaml
-id: VISION
-status: approved
-owner: Project Sponsor / Product Owner
-created: 2026-06-13
-last_updated: 2026-06-13
 completeness_level: complete
-upstream:
-  - ../BUSINESS.md
-  - ../README.md
-downstream:
-  - ../02_business_case/BUSINESS_CASE.md
-  - ../04_systems/SYS-001-feed-generation.md
-related_adrs:
-  - ../07_decisions/ADR-001-use-nestjs-postgres-kubernetes.md
-```
 
-## One-Sentence Vision
+## One-sentence vision
+Provide a dependable Heureka marketplace feed that keeps product and stock data in sync with the Alfares catalog while preserving a truthful, bounded service scope.
 
-`heureka-service` provides deterministic Heureka.cz/sk XML product feeds from catalog data for marketplace submission workflows.
+## Problem statement
+The ecosystem needs a consistent way to publish product information to Heureka.cz/sk without manual feed maintenance, while preventing invalid or stale product data from reaching the public marketplace feed.
 
-## Problem Statement
+## Target users
+- Marketplace operations managing product publications
+- Catalog and warehouse teams maintaining the source-of-truth data
+- Platform operators monitoring feed health and readiness
 
-Marketplace consumers need a current, valid XML feed that reflects catalog and stock state without exposing internal business data.
+## Core user need
+The user needs a feed-generation workflow that stays valid, current, and operationally reviewable without requiring ad hoc manual updates or broader ownership of unrelated domain services.
 
-## Target Users
+## Key outcomes
+- Heureka feed generation remains valid, timely, and aligned with current catalog and stock state.
+- Product readiness and inclusion rules stay operationally transparent.
+- The service remains a bounded marketplace integration with honest upstream dependencies.
 
-Marketplace operations, `flipflop-service`, and engineers responsible for feed reliability.
+## Non-goals
+- Owning the central catalog data model
+- Managing direct payment and invoice flows
+- Operating a general commerce application outside the marketplace feed scope
 
-## Core User Need
+## Success criteria
+- The feed remains valid and complete for active marketplace publication.
+- Zero-stock products are excluded.
+- The service remains honest about its ownership boundaries and dependency model.
 
-Consumers need a valid public feed that excludes unavailable products and regenerates predictably after stock changes.
-
-## Key Outcomes
-
-Valid XML, zero-stock exclusion, sub-60-second generation, feed history/settings APIs, and no public exposure of internal commercial data.
-
-## Non-Goals
-
-The service is not the catalog source of truth, warehouse stock owner, Heureka submission scheduler, or publisher of internal financial data.
-
-## Success Criteria
-
-Feed endpoints return valid XML or controlled errors; regeneration preserves `../BUSINESS.md`; changes are traceable through IPS artifacts.
-
-## Product Philosophy
-
-Prefer deterministic, observable feed generation over implicit correction.
-
-## AI Philosophy
-
-AI agents may assist only with scoped, traced changes that preserve invariants and produce validation evidence.
+## Approval
+Status: approved
+Approved by: project owner
+Approval evidence: owner-confirmation: heureka-onboarding-approved

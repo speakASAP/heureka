@@ -1,96 +1,60 @@
-# heureka-service
+# heureka
 
-Heureka.cz/sk XML feed, dashboard, API gateway, and sales-channel integration service.
+## Status
+Status: production
+Lifecycle: active service
+The Heureka integration service generates and maintains the Heureka.cz/sk XML feed for catalog products and exposes feed status, product readiness, and order ingestion endpoints for the marketplace integration workflow.
 
-**Domain**: https://heureka.alfares.cz
-**Stack**: NestJS · PostgreSQL · Kubernetes (`statex-apps`)
-**Service port**: `3800`
-**API gateway port**: `3801`
+## Documentation authority
+This repository is the source of truth for the Heureka service boundary, runtime contract, and integration metadata. Cross-repo ecosystem ownership remains with the underlying catalog, warehouse, and platform services it depends on.
 
-## Public and Dashboard Routes
+## Capabilities
+- auth: not-applicable — The service presents hosted Auth entry routes but does not own the central auth provider or identity boundary.
+- postgres: required — The repo uses PostgreSQL for the Heureka feed, products, and settings state.
+- redis: not-applicable — No Redis runtime is required for the feed-generation workflow.
+- logging: required — The service emits structured logs and dependency health evidence through the shared platform logging path.
+- notifications: not-applicable — The service does not operate a user-notification delivery stack; it remains a marketplace feed integration.
+- ai: not-applicable — The service is deterministic feed-generation logic and does not own an AI runtime.
+- payments: not-applicable — Heureka feed generation does not perform payment processing.
+- catalog: required — The service consumes catalog product data to determine which items qualify for the feed and readiness checks.
+- orders: required — The service ingests and reads marketplace order information for the Heureka integration workflow.
+- warehouse: required — The service subscribes to `stock.updated` events and regenerates the feed based on warehouse state.
+- invoices: not-applicable — The service does not issue or manage invoices.
+- object-storage: not-applicable — The service does not own object storage or file-serving persistence.
+- event-bus: required — The service consumes `stock.updated` messages from the shared event bus for feed regeneration.
+- docs-rag: required — The repo is part of the ecosystem service map and should remain discoverable through the documentation index.
+- monitoring: required — The app exposes health and dependency-health endpoints for the platform monitoring boundary.
+- backups: required — The PostgreSQL-backed Heureka state should be included in the platform backup scope.
 
-| Method | Path | Description |
-| --- | --- | --- |
-| GET | `/` | Public Heureka channel landing |
-| GET | `/login`, `/register` | Hosted Auth entry routes |
-| GET | `/auth/callback` | Hosted Auth token callback |
-| GET | `/dashboard` | Protected dashboard shell |
-| GET | `/dashboard/feed` | Feed dashboard shell |
-| GET | `/dashboard/orders` | Orders dashboard shell |
-| GET | `/dashboard/operations` | Operations/readiness dashboard shell |
-| GET | `/dashboard/settings` | Settings dashboard shell |
-| GET | `/dashboard/admin/users` | Admin users shell |
+## Interfaces
+- Primary domain: https://heureka.alfares.cz
+- Service ports: 3800 (service), 3801 (API gateway)
+- Health endpoints: GET /health, GET /health/dependencies
+- Feed endpoints: /heureka/feed, /heureka/feed/download, /heureka/feed/regenerate, /heureka/feed/status
+- Product readiness endpoints: /heureka/products, /heureka/products/:productId/status, /heureka/products/:productId/include, /heureka/products/:productId/exclude
+- Order endpoints: /heureka/orders/ingest, /heureka/orders, /heureka/orders/:id
+- Dependency owners: catalog-microservice, warehouse-microservice, db-server-postgres, logging-microservice
 
-## Heureka Service API
+## Development
+- Stack: NestJS, TypeScript, PostgreSQL, Kubernetes
+- Source of truth: repository-local service code and deployment config
+- Validation: use repo-local scripts and the central IPS adoption validator for the planning gate
+- Typical checks: npm run build, npm test, npm run verify:health-dependencies, npm run verify:heureka-stock-readiness-live
 
-Base: `https://heureka.alfares.cz`
+## Configuration
+- Secrets are managed through Vault and External Secrets into the Kubernetes namespace.
+- Runtime config is repo-local and environment-managed, with the database and service boundary defined in the platform configuration.
+- The service uses the shared catalog and inventory integration layers rather than inventing a separate upstream source of truth.
 
-| Method | Path | Description |
-| --- | --- | --- |
-| GET | `/health` | Lightweight Kubernetes probe |
-| GET | `/health/dependencies` | Read-only dependency health contract |
-| GET | `/heureka/feed` | Generate and return XML feed |
-| GET | `/heureka/feed/download` | Download feed file |
-| POST | `/heureka/feed/regenerate` | Guarded feed regeneration |
-| GET | `/heureka/feed/status` | Latest feed status |
-| GET | `/heureka/feed/readiness/products/:productId` | Check one Catalog product for feed readiness |
-| POST | `/heureka/feed/readiness/bulk` | Check up to 100 Catalog products for feed readiness |
-| GET | `/heureka/products` | List products in feed |
-| GET | `/heureka/products/:productId/status` | Read product feed inclusion and readiness |
-| POST | `/heureka/products/:productId/include` | Include product after readiness passes |
-| DELETE | `/heureka/products/:productId/exclude` | Exclude product |
-| POST | `/heureka/orders/ingest` | Service-token guarded order ingestion |
-| GET | `/heureka/orders` | Hosted Auth protected order list |
-| GET | `/heureka/orders/:id` | Hosted Auth protected order detail |
-| GET | `/heureka/dashboard/readiness/lanes` | Hosted Auth protected stock/media/catalog/settings handoff lanes |
+## Deployment
+- Deployment mode: Kubernetes in the `statex-apps` namespace
+- Runtime image: `localhost:5000/heureka-service:latest`
+- Deploy command: `./scripts/deploy.sh`
+- Ingress: `https://heureka.alfares.cz`
+- Operational access: Kubernetes rollout and pod logs via the platform operator flow
 
-Product include/exclude endpoints require `x-service-name` and `x-internal-service-token` service headers. Catalog should call readiness first and let Heureka own feed inclusion.
-
-## API Gateway
-
-Base: `https://heureka.alfares.cz/api`
-
-The gateway exposes `/api/health` and routes Heureka-owned `/api/heureka/feed*`, `/api/heureka/dashboard*`, `/api/heureka/products*`, `/api/heureka/orders*`, and `/api/heureka/health*` paths to `heureka-service`. Unknown legacy `/api/heureka/*` paths retain the Aukro compatibility fallback.
-
-## Feed Format
-
-Heureka XML schema can be checked with:
-
-```bash
-curl -k https://heureka.alfares.cz/heureka/feed?type=heureka_cz | xmllint --noout -
-curl -k -D - https://heureka.alfares.cz/heureka/feed/preview?type=heureka_cz -o /tmp/heureka-preview.xml
-```
-
-## Validation
-
-Common remote validation commands:
-
-```bash
-npm run verify:heureka-order-ingestion
-npm run verify:heureka-orders-runtime-readiness
-npm run verify:heureka-catalog-token-path
-npm run verify:heureka-stock-readiness-live
-npm run verify:heureka-blocked-product-lanes
-npm run verify:heureka-external-readiness
-npm run verify:health-dependencies
-npm run verify:heureka-owner-data-template
-npm run verify:task-010-completion-audit
-NPM_CONFIG_CACHE=/tmp/heureka-npm-cache npm run verify:task-010-source-parity
-LOGGING_SERVICE_URL=http://logging-microservice:3367 npx ts-node --skip-ignore --compiler-options '{"types":["node"]}' services/api-gateway/src/gateway/gateway-route-parity.self-test.ts
-```
-
-Use `NPM_CONFIG_CACHE=/tmp/heureka-npm-cache` for root `npm run` commands when `/mnt/docker-data` is full, because the default npm cache on that partition can fail before package scripts start.
-
-## Owner Data Completion
-
-`npm run verify:heureka-owner-data-template` prints the read-only JSON template for the remaining owner inputs: stock decisions, approved image URLs/files, the single Catalog category/price item, and external Heureka approval/import evidence.
-
-Do not treat the template as source authority. Fill it only from Warehouse/current-stock reports, approved public image assets, Catalog pricing/category ownership, and current external Heureka evidence.
-
-## Secrets
-
-All secrets are managed through Vault and ExternalSecrets into the Kubernetes namespace. Do not commit secrets or print merchant/API tokens in validation logs.
-
-## Architecture, Deployment, and Ops
-
-See `SYSTEM.md`, `BUSINESS.md`, and `docs/orchestrator/TASK-010-channel-parity-checklist.md`.
+## Health and observability
+- Health probes: GET /health and GET /health/dependencies
+- Logs: structured platform logs via the shared logging service
+- Feed validity: XML feed generation must continue to satisfy the Heureka schema contract and avoid zero-stock items.
+- Key metric: feed generation must complete within 60 seconds and remain valid for the public Marketplace feed.

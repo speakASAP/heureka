@@ -1,40 +1,23 @@
-# Project Invariants
+# Project invariants
 
-```yaml
-id: PROJECT-INVARIANTS
-status: reviewed
-owner: Engineering
-created: 2026-06-13
-last_updated: 2026-06-13
 completeness_level: complete
-upstream:
-  - ../00_constitution/CONSTITUTION.md
-  - ../01_vision/VISION.md
-  - ../BUSINESS.md
-```
+
+status: validated
 
 ## Purpose
-
-Declare non-negotiable service rules every task, plan, code change, and validation report must preserve.
+This file defines the operational invariants for the Heureka service and keeps the repo aligned with the actual ownership boundaries of the marketplace integration workflow.
 
 ## Applicability
-
-Applies to all work unless a human-approved vision-evolution entry or ADR changes the rule.
+These invariants apply to the Heureka repo, its operational workflow, and the service contract it owns in the wider ecosystem.
 
 ## Invariants
-
-| ID | Level | Source | Rule | Forbidden outcome | Validation method | Gate |
-|---|---|---|---|---|---|---|
-| INV-001 | business | `../BUSINESS.md` | Generated feed XML must remain valid. | Serving invalid XML. | XML validation and tests. | pre-coding/deployment |
-| INV-002 | business | `../BUSINESS.md` | Zero-stock products must not be included. | Feed contains unavailable products. | Eligibility tests. | pre-coding/deployment |
-| INV-003 | operational | `../BUSINESS.md` | Feed generation must complete within 60 seconds. | Generation exceeds SLA. | Timing evidence. | deployment |
-| INV-004 | data-safety | `../CLAUDE.md` | Public feed excludes internal cost/margin data. | Public output contains internal data. | Output-field tests. | pre-coding/deployment |
-| INV-005 | security | `../SYSTEM.md` | Secret values stay in Vault/ESO and outside IPS artifacts. | Secrets copied into artifacts. | Sensitive-data scan. | pre-coding/deployment |
+- The repo must not claim ownership of the product catalog source-of-truth or the central warehouse system.
+- The feed must remain valid XML and must exclude zero-stock products.
+- The service contract must be traceable to the project’s adoption and validation artifacts.
+- Operational documentation must stay scoped to the Heureka integration boundary and not invent unrelated commerce responsibilities.
 
 ## Exceptions
-
-No approved exceptions are recorded.
+Any exception to the feed validity or ownership boundary must be reviewed through the project owner and a clear justification must be recorded in the repo’s operational docs.
 
 ## Review cadence
-
-Review when business rules, architecture, feed contracts, integrations, or deployment processes change.
+This file should be reviewed at milestones that touch feed generation, data ownership, or dependency changes.

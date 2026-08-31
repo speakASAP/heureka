@@ -1,29 +1,18 @@
 {
-  "schema_version": "1.0",
-  "repository": "heureka",
-  "service": {
-    "name": "heureka-service",
-    "kind": "service",
-    "lifecycle": "completed_frozen",
-    "deployment": "kubernetes"
+  "schemaVersion": 1,
+  "project": "heureka",
+  "lifecycle": "production",
+  "health": "active",
+  "activeTask": "bootstrap-service",
+  "lastUpdated": "2026-08-31T00:00:00Z",
+  "deployment": {
+    "status": "deployed",
+    "environment": "statex-apps"
   },
-  "planning": {
-    "status": "done",
-    "active_goal_ids": [],
-    "next_ready_goal_ids": [],
-    "blocked_goal_ids": [],
-    "active_workstream_ids": [],
-    "last_updated_at": "2026-07-05T00:00:00Z"
-  },
-  "delivery": {
-    "last_validation_id": null,
-    "last_validation_status": null,
-    "validation_debt_count": 1,
-    "last_deployment_commit": null
-  },
-  "collection": {
-    "profile": "ips-full",
-    "artifact_index": "docs/registry/ARTIFACT_INDEX.json",
-    "status_source": "human-and-coordinator-maintained (TASKS.md, PLAN.md, STATE.json)"
-  }
+  "blockers": [
+    "The service must remain honest about its upstream ownership boundaries for catalog, warehouse, and platform dependencies."
+  ],
+  "followUps": [
+    "Validate the live Heureka XML feed against the schema and zero-stock exclusion rules in the next operational pass."
+  ]
 }

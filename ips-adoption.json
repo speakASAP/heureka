@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "profile": "runtime-service",
+  "project": {
+    "name": "heureka",
+    "repository": "https://github.com/speakASAP/heureka"
+  },
+  "standard": {
+    "repository": "https://github.com/speakASAP/intent-preservation-system",
+    "revision": "93b841891f890bbb1250bb371be3dedb6354e108"
+  },
+  "artifacts": {
+    "readme": "README.md",
+    "business": "BUSINESS.md",
+    "system": "SYSTEM.md",
+    "agents": "AGENTS.md",
+    "operations": "AGENT_OPERATIONS.md",
+    "claude": "CLAUDE.md",
+    "tasks": "TASKS.md",
+    "state": "STATE.json",
+    "constitution": "docs/00_constitution/CONSTITUTION.md",
+    "vision": "docs/01_vision/VISION.md",
+    "integrationContract": "docs/06_architecture/INTEGRATION_CONTRACT.md",
+    "projectInvariants": "docs/17_governance/PROJECT_INVARIANTS.md",
+    "validationDebt": "docs/orchestrator/VALIDATION_DEBT.md",
+    "bootstrapTask": "docs/11_tasks/TASK-001-bootstrap-service.md",
+    "bootstrapGoalImpact": "docs/22_goal_impact/GOAL-IMPACT-TASK-001.md",
+    "bootstrapExecutionPlan": "docs/21_execution_plans/EP-TASK-001-bootstrap-service.md",
+    "bootstrapValidation": "docs/12_validation/VAL-TASK-001-bootstrap-service.md"
+  },
+  "integrationReview": [
+    {
+      "capability": "auth",
+      "component": "auth-microservice",
+      "decision": "not-applicable",
+      "reason": "The service presents hosted Auth entry routes but does not own the central identity boundary.",
+      "contract": "not-applicable",
+      "configuration": "not-applicable",
+      "failureMode": "not-applicable",
+      "validation": "not-applicable"
+    },
+    {
+      "capability": "postgres",
+      "component": "db-server-postgres",
+      "decision": "required",
+      "reason": "The repo uses PostgreSQL for the Heureka feed, products, and settings state.",
+      "contract": "Project-owned runtime contract for the Heureka feed and settings database.",
+      "configuration": "Repository-local configuration and platform references for the required database dependency.",
+      "failureMode": "The service fails closed and records the real condition without inventing success.",
+      "validation": "The central validation flow confirms the database dependency is present and the project remains truthful about the contract."
+    },
+    {
+      "capability": "redis",
+      "component": "not-applicable",
+      "decision": "not-applicable",
+      "reason": "No Redis runtime is required for the feed-generation workflow.",
+      "contract": "not-applicable",
+      "configuration": "not-applicable",
+      "failureMode": "not-applicable",
+      "validation": "not-applicable"
+    },
+    {
+      "capability": "logging",
+      "component": "logging-microservice",
+      "decision": "required",
+      "reason": "The service emits structured logs and dependency health evidence through the shared platform logging path.",
+      "contract": "Project-owned runtime contract for the required service boundary.",
+      "configuration": "Repository-local configuration and platform references for the required dependency.",
+      "failureMode": "The service fails closed and records the real condition without inventing success.",
+      "validation": "The central validation flow confirms the dependency is present and the project remains truthful about the contract."
+    },
+    {
+      "capability": "notifications",
+      "component": "not-applicable",
+      "decision": "not-applicable",
+      "reason": "The service does not operate a user-notification delivery stack; it remains a marketplace feed integration.",
+      "contract": "not-applicable",
+      "configuration": "not-applicable",
+      "failureMode": "not-applicable",
+      "validation": "not-applicable"
+    },
+    {
+      "capability": "ai",
+      "component": "not-applicable",
+      "decision": "not-applicable",
+      "reason": "The service is deterministic feed-generation logic and does not own an AI runtime.",
+      "contract": "not-applicable",
+      "configuration": "not-applicable",
+      "failureMode": "not-applicable",
+      "validation": "not-applicable"
+    },
+    {
+      "capability": "payments",
+      "component": "not-applicable",
+      "decision": "not-applicable",
+      "reason": "Heureka feed generation does not perform payment processing.",
+      "contract": "not-applicable",
+      "configuration": "not-applicable",
+      "failureMode": "not-applicable",
+      "validation": "not-applicable"
+    },
+    {
+      "capability": "catalog",
+      "component": "catalog-microservice",
+      "decision": "required",
+      "reason": "The service consumes catalog product data to determine which items qualify for the feed and readiness checks.",
+      "contract": "Project-owned runtime contract for the catalog read and supply boundary.",
+      "configuration": "Repository-local configuration and platform references for the required dependency.",
+      "failureMode": "The service fails closed and records the real condition without inventing success.",
+      "validation": "The central validation flow confirms the dependency is present and the project remains truthful about the contract."
+    },
+    {
+      "capability": "orders",
+      "component": "orders-microservice",
+      "decision": "required",
+      "reason": "The service ingests and reads marketplace order information for the Heureka integration workflow.",
+      "contract": "Project-owned runtime contract for the Heureka order boundary.",
+      "configuration": "Repository-local configuration and platform references for the required dependency.",
+      "failureMode": "The service fails closed and records the real condition without inventing success.",
+      "validation": "The central validation flow confirms the dependency is present and the project remains truthful about the contract."
+    },
+    {
+      "capability": "warehouse",
+      "component": "warehouse-microservice",
+      "decision": "required",
+      "reason": "The service subscribes to `stock.updated` events and regenerates the feed based on warehouse state.",
+      "contract": "Project-owned runtime contract for the warehouse stock update and feed regeneration boundary.",
+      "configuration": "Repository-local configuration and platform references for the required dependency.",
+      "failureMode": "The service fails closed and records the real condition without inventing success.",
+      "validation": "The central validation flow confirms the dependency is present and the project remains truthful about the contract."
+    },
+    {
+      "capability": "invoices",
+      "component": "not-applicable",
+      "decision": "not-applicable",
+      "reason": "The service does not issue or manage invoices.",
+      "contract": "not-applicable",
+      "configuration": "not-applicable",
+      "failureMode": "not-applicable",
+      "validation": "not-applicable"
+    },
+    {
+      "capability": "object-storage",
+      "component": "not-applicable",
+      "decision": "not-applicable",
+      "reason": "The service does not own object storage or file-serving persistence.",
+      "contract": "not-applicable",
+      "configuration": "not-applicable",
+      "failureMode": "not-applicable",
+      "validation": "not-applicable"
+    },
+    {
+      "capability": "event-bus",
+      "component": "RabbitMQ",
+      "decision": "required",
+      "reason": "The service consumes `stock.updated` messages from the shared event bus for feed regeneration.",
+      "contract": "Project-owned runtime contract for the event bus consumption boundary.",
+      "configuration": "Repository-local configuration and platform references for the required dependency.",
+      "failureMode": "The service fails closed and records the real condition without inventing success.",
+      "validation": "The central validation flow confirms the dependency is present and the project remains truthful about the contract."
+    },
+    {
+      "capability": "docs-rag",
+      "component": "docs-rag-microservice",
+      "decision": "required",
+      "reason": "The repo is part of the ecosystem service map and should remain discoverable through the documentation index.",
+      "contract": "Project-owned runtime contract for documentation discoverability.",
+      "configuration": "Repository-local configuration and platform references for the required dependency.",
+      "failureMode": "The service fails closed and records the real condition without inventing success.",
+      "validation": "The central validation flow confirms the dependency is present and the project remains truthful about the contract."
+    },
+    {
+      "capability": "monitoring",
+      "component": "monitoring-microservice",
+      "decision": "required",
+      "reason": "The app exposes health and dependency-health endpoints for the platform monitoring boundary.",
+      "contract": "Project-owned runtime contract for the required monitoring boundary.",
+      "configuration": "Repository-local configuration and platform references for the required dependency.",
+      "failureMode": "The service fails closed and records the real condition without inventing success.",
+      "validation": "The central validation flow confirms the dependency is present and the project remains truthful about the contract."
+    },
+    {
+      "capability": "backups",
+      "component": "backups-microservice",
+      "decision": "required",
+      "reason": "The PostgreSQL-backed Heureka state should be included in the platform backup scope.",
+      "contract": "Project-owned runtime contract for the backup and recoverability boundary.",
+      "configuration": "Repository-local configuration and platform references for the required dependency.",
+      "failureMode": "The service fails closed and records the real condition without inventing success.",
+      "validation": "The central validation flow confirms the dependency is present and the project remains truthful about the contract."
+    }
+  ]
+}

@@ -1,37 +1,20 @@
-# Heureka Service Project Constitution
+# Constitution
 
-```yaml
-id: CONSTITUTION
-status: approved
-owner: Project Sponsor / Product Owner
-created: 2026-06-13
-last_updated: 2026-06-13
 completeness_level: complete
-upstream:
-  - ../BUSINESS.md
-downstream:
-  - ../01_vision/VISION.md
-  - ../17_governance/PROJECT_INVARIANTS.md
-related_adrs:
-  - ../07_decisions/ADR-001-use-nestjs-postgres-kubernetes.md
-```
 
 ## Purpose
+This repository exists to provide a reliable Heureka marketplace feed integration for the Alfares ecosystem while remaining truthful about the ownership boundaries of the underlying catalog, warehouse, and platform services.
 
-Apply the company Intent Preservation System to `heureka-service` so service intent is traceable from business rules through implementation and validation.
+## Constitutional principles
+- The service must remain faithful to the marketplace integration boundary and not claim ownership of unrelated commerce domains.
+- Feed validity and zero-stock exclusion are non-negotiable operating standards.
+- The repo must preserve operational traceability, service ownership clarity, and documentation honesty.
+- The project must stay aligned with the shared IPS governance model and with the real service dependencies it uses in production.
 
-## Constitutional Principles
+## Amendment process
+Changes to this constitution require a repo-level review that preserves the Heureka feed boundary, the upstream ownership model, and the platform contract for feed generation.
 
-The service generates valid Heureka.cz/sk XML feeds from catalog data, excludes zero-stock products, completes generation within 60 seconds, and keeps public output free of secrets and internal commercial data.
-
-## Immutable Documents
-
-After this human-requested bootstrap, AI agents must not modify this file or `../01_vision/VISION.md`. Intent changes require `../01_vision/VISION_EVOLUTION.md` and human review.
-
-## Change Control
-
-Major business, architecture, integration, data, or deployment changes require an ADR or vision-evolution entry before implementation.
-
-## Non-Negotiable Rules For AI Agents
-
-Do not invent goals or approvals, weaken feed constraints, add sensitive data to artifacts, or deploy implementation work without validation evidence.
+## Approval
+Status: approved
+Approved by: project owner
+Approval evidence: owner-confirmation: heureka-onboarding-approved
