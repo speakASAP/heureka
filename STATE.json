@@ -43,7 +43,5 @@
     "followUps": [
       "Validate the live Heureka XML feed against the schema and zero-stock exclusion rules in the next operational pass."
     ]
-  },
-  "activeTask": "- complete IPS adoption profile for heureka",
-  "status": "active"
+  }
 }
