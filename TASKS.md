@@ -1,14 +1,11 @@
 # Tasks
 
-## Active
-- complete IPS adoption profile for heureka
+## Active- complete IPS adoption profile for heureka
 
-## Ready next
-- validate the Heureka XML generation flow against the live feed contract
+## Ready Next- validate the Heureka XML generation flow against the live feed contract
 - check product readiness handling for zero-stock exclusion cases
 
-## Blocked
-- no active blockers beyond completing the final onboarding documentation and validation evidence
+## Blocked- no active blockers beyond completing the final onboarding documentation and validation evidence
 
 ## Completed
 - real service boundary documented according to the repo’s actual catalog and stock dependencies
