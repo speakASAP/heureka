@@ -56,6 +56,17 @@ spec:
                 secretKeyRef:
                   name: heureka-service-secret
                   key: ORDERS_SERVICE_TOKEN
+            # Inbound guard credential (HeurekaFeedMutationGuard /
+            # HeurekaOrderIngestionGuard). Same no-`envFrom` caveat as above: it
+            # reaches the container only because it is named here. Previously the
+            # live cluster mapped this to heureka-service-secret#JWT_TOKEN, the
+            # shared a2880693 value, while catalog-microservice presented its own
+            # identity credential — so this lane returned 401 in production.
+            - name: HEUREKA_INTERNAL_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: heureka-service-secret
+                  key: HEUREKA_INTERNAL_SERVICE_TOKEN
           startupProbe:
             httpGet:
               path: /health

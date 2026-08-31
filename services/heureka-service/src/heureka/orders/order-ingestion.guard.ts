@@ -5,10 +5,13 @@ import { timingSafeEqual } from 'crypto';
 export class HeurekaOrderIngestionGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
+    // JWT_TOKEN is deliberately NOT in this chain: that property holds the shared
+    // a2880693 value, which was simultaneously the credential for five other
+    // services and cannot be revoked per-caller. Callers present their own
+    // identity credential instead.
     const configuredToken = (
       process.env.HEUREKA_INTERNAL_SERVICE_TOKEN ||
       process.env.INTERNAL_SERVICE_TOKEN ||
-      process.env.JWT_TOKEN ||
       ''
     ).trim();
     const providedToken = String(request.headers['x-internal-service-token'] || '').trim();
