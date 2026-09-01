@@ -25,23 +25,5 @@
     "profile": "ips-full",
     "artifact_index": "docs/registry/ARTIFACT_INDEX.json",
     "status_source": "TASKS.md onboarding sections and reports/validation/2026-08-30-wave-0-v1-registry-validation.json; legacy onboarding facts retained under legacy."
-  },
-  "legacy": {
-    "schemaVersion": 1,
-    "project": "heureka",
-    "lifecycle": "production",
-    "health": "active",
-    "activeTask": "bootstrap-service",
-    "lastUpdated": "2026-08-31T00:00:00Z",
-    "deployment": {
-      "status": "deployed",
-      "environment": "statex-apps"
-    },
-    "blockers": [
-      "The service must remain honest about its upstream ownership boundaries for catalog, warehouse, and platform dependencies."
-    ],
-    "followUps": [
-      "Validate the live Heureka XML feed against the schema and zero-stock exclusion rules in the next operational pass."
-    ]
   }
 }
