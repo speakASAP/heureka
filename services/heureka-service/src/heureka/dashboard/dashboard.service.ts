@@ -60,7 +60,7 @@ type CentralOrderLifecycle = {
 
 @Injectable()
 export class DashboardService {
-  private readonly defaultAdminEmails = ['ssfskype@gmail.com', 'test@example.com'];
+  private readonly defaultAdminEmails = ['ssfskype@gmail.com'];
   private readonly defaultAdminRoles = [
     'global:superadmin',
     'global:platform_admin',
