@@ -1,8 +1,9 @@
 {
-  "created_at": "2026-07-04T22:29:10Z",
+  "created_at": "2026-09-03T12:41:26Z",
   "execution_plans": {
-    "execution_plan_count": 8,
+    "execution_plan_count": 9,
     "execution_plan_files": [
+      "docs/21_execution_plans/EP-TASK-001-bootstrap-service.md",
       "docs/21_execution_plans/EP-TASK-001.md",
       "docs/21_execution_plans/EP-TASK-002-design-governed-feed-publication-lifecycle.md",
       "docs/21_execution_plans/EP-TASK-003-define-feed-validation-policy-engine.md",
@@ -36,8 +37,9 @@
   "status": "pass",
   "tasks": {
     "missing_upstream_traceability": [],
-    "task_count": 8,
+    "task_count": 9,
     "task_files": [
+      "docs/11_tasks/TASK-001-bootstrap-service.md",
       "docs/11_tasks/TASK-001-implement-ips-governance-bootstrap.md",
       "docs/11_tasks/TASK-002-design-governed-feed-publication-lifecycle.md",
       "docs/11_tasks/TASK-003-define-feed-validation-policy-engine.md",

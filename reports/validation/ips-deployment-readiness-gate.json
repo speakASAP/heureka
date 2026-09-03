@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-07-04T22:29:10Z",
+  "created_at": "2026-09-03T12:41:27Z",
   "gate": "deployment_readiness",
-  "next_step": "ready_for_deployment_review",
+  "next_step": "fix_deployment_readiness_findings",
   "pre_coding_gate": {
     "report_path": "reports/validation/ips-pre-coding-gate.json",
     "status": "pass"
@@ -13,14 +13,39 @@
   },
   "root": "/home/ssf/Documents/Github/heureka",
   "schema_version": "1.0.0",
-  "status": "pass",
+  "status": "fail",
   "strict_doc_audit": {
-    "findings_count": 0,
-    "score": 100,
-    "status": "PASS"
+    "findings_count": 103,
+    "score": 0,
+    "status": "FAIL"
   },
-  "target": "TASK-009",
+  "target": null,
   "unresolved_markers": [
+    {
+      "line": 96,
+      "marker": "[MISSING: ...]",
+      "path": ".github/skills/register-new-app/SKILL.md"
+    },
+    {
+      "line": 127,
+      "marker": "[MISSING: ...]",
+      "path": ".github/skills/register-new-app/SKILL.md"
+    },
+    {
+      "line": 127,
+      "marker": "[UNKNOWN: ...]",
+      "path": ".github/skills/register-new-app/SKILL.md"
+    },
+    {
+      "line": 47,
+      "marker": "[MISSING: ...]",
+      "path": "PLAN.md"
+    },
+    {
+      "line": 47,
+      "marker": "[UNKNOWN: ...]",
+      "path": "PLAN.md"
+    },
     {
       "line": 35,
       "marker": "[MISSING: approved TASK-008 implementation prompt after TASK-002 lifecycle/status shape is published]",
@@ -157,26 +182,6 @@
       "path": "docs/23_documentation_contracts/TASK-007_EVENT_TAXONOMY.md"
     },
     {
-      "line": 60,
-      "marker": "[MISSING: ...]",
-      "path": "AGENT_OPERATIONS.md"
-    },
-    {
-      "line": 60,
-      "marker": "[UNKNOWN: ...]",
-      "path": "AGENT_OPERATIONS.md"
-    },
-    {
-      "line": 47,
-      "marker": "[MISSING: ...]",
-      "path": "PLAN.md"
-    },
-    {
-      "line": 47,
-      "marker": "[UNKNOWN: ...]",
-      "path": "PLAN.md"
-    },
-    {
       "line": 41,
       "marker": "[MISSING: Heureka channel constraints for promotions]",
       "path": "docs/business-process-control-plane/HOLIDAY_DISCOUNT_ADOPTION.md"
@@ -255,6 +260,81 @@
       "line": 46,
       "marker": "[MISSING: deploy]",
       "path": "docs/orchestrator/2026-07-03-orders-lifecycle-ui-reliability-report.md"
+    },
+    {
+      "line": 13,
+      "marker": "[MISSING: ...]",
+      "path": "docs/orchestrator/2026-07-05-error-free-orders-lifecycle-handoff.md"
+    },
+    {
+      "line": 22,
+      "marker": "[MISSING: ...]",
+      "path": "docs/orchestrator/2026-07-05-runtime-gate-packet-handoff.md"
+    },
+    {
+      "line": 22,
+      "marker": "[UNKNOWN: ...]",
+      "path": "docs/orchestrator/2026-07-05-runtime-gate-packet-handoff.md"
+    },
+    {
+      "line": 36,
+      "marker": "[MISSING: approved live Heureka customer/admin bearer or browser session packet for row-level dashboard/admin smoke]",
+      "path": "docs/orchestrator/2026-07-05-runtime-gate-packet-handoff.md"
+    },
+    {
+      "line": 37,
+      "marker": "[MISSING: approved row-level proof that at least one Heureka dashboard/admin response renders a current non-stale canonical Orders lifecycle stage]",
+      "path": "docs/orchestrator/2026-07-05-runtime-gate-packet-handoff.md"
+    },
+    {
+      "line": 38,
+      "marker": "[UNKNOWN: whether current production data contains Heureka rows with central lifecycle status available]",
+      "path": "docs/orchestrator/2026-07-05-runtime-gate-packet-handoff.md"
+    },
+    {
+      "line": 7,
+      "marker": "[MISSING: Heureka business health vision artifact]",
+      "path": "docs/orchestrator/2026-07-06-heureka-business-health-handoff.md"
+    },
+    {
+      "line": 8,
+      "marker": "[MISSING: business-health Heureka channel readback goal impact]",
+      "path": "docs/orchestrator/2026-07-06-heureka-business-health-handoff.md"
+    },
+    {
+      "line": 9,
+      "marker": "[MISSING: Heureka service system artifact]",
+      "path": "docs/orchestrator/2026-07-06-heureka-business-health-handoff.md"
+    },
+    {
+      "line": 10,
+      "marker": "[MISSING: Heureka business-health channel readback feature artifact]",
+      "path": "docs/orchestrator/2026-07-06-heureka-business-health-handoff.md"
+    },
+    {
+      "line": 11,
+      "marker": "[MISSING: Heureka business-health channel readback task]",
+      "path": "docs/orchestrator/2026-07-06-heureka-business-health-handoff.md"
+    },
+    {
+      "line": 64,
+      "marker": "[MISSING: approved live Heureka readback packet]",
+      "path": "docs/orchestrator/2026-07-06-heureka-business-health-handoff.md"
+    },
+    {
+      "line": 65,
+      "marker": "[MISSING: target product/feed/account for Heureka channel readback proof]",
+      "path": "docs/orchestrator/2026-07-06-heureka-business-health-handoff.md"
+    },
+    {
+      "line": 66,
+      "marker": "[MISSING: provider/feed/category policy for Heureka external import and availability convergence]",
+      "path": "docs/orchestrator/2026-07-06-heureka-business-health-handoff.md"
+    },
+    {
+      "line": 67,
+      "marker": "[MISSING: approved reconciliation rule that maps Warehouse/Catalog availability to Heureka feed sellable quantity without feed regeneration or external mutation side effects]",
+      "path": "docs/orchestrator/2026-07-06-heureka-business-health-handoff.md"
     },
     {
       "line": 12,
@@ -688,10 +768,8 @@
     }
   ],
   "validation_reports": {
-    "matching_reports": [
-      "docs/12_validation/VAL-TASK-009.md"
-    ],
     "reports": [
+      "docs/12_validation/VAL-TASK-001-bootstrap-service.md",
       "docs/12_validation/VAL-TASK-001-ips-bootstrap.md",
       "docs/12_validation/VAL-TASK-002.md",
       "docs/12_validation/VAL-TASK-003.md",
@@ -703,6 +781,6 @@
       "docs/12_validation/VAL-TASK-009.md"
     ],
     "status": "pass",
-    "target": "TASK-009"
+    "target": null
   }
 }
