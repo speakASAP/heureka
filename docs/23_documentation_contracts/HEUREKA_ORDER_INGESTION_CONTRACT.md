@@ -23,13 +23,6 @@ Heureka may receive or replay Heureka-channel order facts, but Orders remains th
 
 ## Endpoint
 
-```http
-POST /heureka/orders/ingest
-x-internal-service-token: <runtime-only Heureka internal token>
-x-service-name: heureka-service
-Content-Type: application/json
-```
-
 The endpoint is internal only. Public Heureka XML feed endpoints remain read-only and do not expose order data.
 
 ## Request

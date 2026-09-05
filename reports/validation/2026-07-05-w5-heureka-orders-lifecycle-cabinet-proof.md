@@ -25,7 +25,6 @@ Runtime proof: PARTIAL, auth-gated for row-level proof. The deployed pod resolve
 
 ## Source Evidence
 
-- `shared/clients/order-client.service.ts` preserves `orders.create.v1`, Orders URL fallbacks, internal-token auth sources, and `x-service-name: heureka-service`.
 - `services/heureka-service/src/public/public.controller.ts` keeps the protected dashboard list API alias `/heureka/dashboard/orders-list`, detail route `/dashboard/orders/:id`, 30s polling, and `visibilitychange` behavior.
 - Dashboard rendering reads lifecycle stage/status, payment state/status, central status counts, stale/unknown states, and detail lifecycle fields.
 - Admin dashboard loads `/heureka/dashboard/admin/stats` and renders `orderLifecycleStats.centralStatusCounts` plus delivery reservation/unknown metrics.
@@ -58,8 +57,6 @@ Pod-local runtime readiness, source assertions skipped by design, no raw values 
 ```bash
 ssh alfares 'kubectl -n statex-apps exec deployment/heureka-service -- sh -lc "pwd; node scripts/verify_heureka_orders_runtime_readiness.js --runtime"'
 ```
-
-Result: PASS, runtime mode, blockers empty. Presence-only evidence: `ORDER_SERVICE_URL`, `JWT_TOKEN`, `HEUREKA_INTERNAL_SERVICE_TOKEN`, and `WAREHOUSE_SERVICE_TOKEN` present; resolved Orders URL source `ORDER_SERVICE_URL`, internal token source `JWT_TOKEN`, Warehouse token source `WAREHOUSE_SERVICE_TOKEN`.
 
 Status-only HTTP smoke, no bearer/session:
 

@@ -12,8 +12,6 @@ Feature: Warehouse-backed Heureka feed readiness validation for TASK-STOCK-004.
 
 Task: add a read-only live verifier that compares Heureka product readiness `availableStock` with Warehouse `/api/stock/:productId/total`.
 
-Execution Plan: run the verifier inside the deployed Heureka pod with `WAREHOUSE_SERVICE_TOKEN` from the pod environment, defaulting to product `884c1c5e-fe94-46c7-aab1-78bcc424e7ee` and supporting comma-separated `HEUREKA_VERIFY_PRODUCT_IDS`.
-
 Coding Prompt: keep the verifier read-only; do not ingest orders, regenerate feeds, mutate Warehouse, or print tokens/raw product payloads.
 
 Code: `scripts/verify_heureka_stock_readiness_live.js` and package script `verify:heureka-stock-readiness-live`.

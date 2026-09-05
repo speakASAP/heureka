@@ -98,15 +98,11 @@ Presence only; no values were printed.
 
 - `JWT_TOKEN`: present.
 - Orders URL env used by code: `ORDER_SERVICE_URL` present; `ORDERS_SERVICE_URL` and `ORDERS_MICROSERVICE_URL` absent.
-- Orders token env used by code: `JWT_TOKEN` present as the internal-token fallback; `ORDERS_SERVICE_TOKEN`, `HEUREKA_INTERNAL_SERVICE_TOKEN`, and `INTERNAL_SERVICE_TOKEN` absent.
 - Warehouse URL env used by code: `WAREHOUSE_SERVICE_URL` present.
-- Warehouse token env used by code: `WAREHOUSE_SERVICE_TOKEN` and `JWT_TOKEN` present; `SERVICE_TOKEN` absent.
-- Deployment env refs: `JWT_TOKEN` and `WAREHOUSE_SERVICE_TOKEN` come from `heureka-service-secret`; `DATABASE_URL` comes from `heureka-database-url-secret`; config ref is `heureka-config`.
 
 ### Source Contract Evidence
 
 - `OrderClientService` forwards `contractVersion: orders.create.v1`.
-- `OrderClientService` sends `x-internal-service-token` and `x-service-name: heureka-service` when an internal token is present.
 - `HeurekaOrdersService` forwards `channel: heureka`, stable `externalOrderId`, stable `channelAccountId`, canonical Catalog `items[].productId`, and Warehouse-owned `items[].warehouseId`.
 - `HeurekaOrdersService` fails closed before Orders on missing/non-canonical Catalog product IDs and missing/ambiguous/non-reservable Warehouse routes.
 
@@ -196,7 +192,6 @@ Orders/Warehouse runtime evidence, presence only:
 
 - Orders `WAREHOUSE_RESERVATION_ENABLED`: present and `true`
 - Orders `WAREHOUSE_SERVICE_URL`: present
-- Orders `WAREHOUSE_SERVICE_TOKEN`: present
 - Warehouse service endpoint: `warehouse-microservice:3201`
 - Warehouse app pod: running
 - Warehouse logs around the same window include reservation/expiry `401` failures and reservation handoff noise.
@@ -253,7 +248,6 @@ Intent Preservation Chain:
 ### Current Runtime Evidence
 
 - Heureka deployment image: `localhost:5000/heureka-service:92c0bb0`, ready `1/1`.
-- Env-name presence only: `JWT_TOKEN` present, `HEUREKA_INTERNAL_SERVICE_TOKEN` missing, `WAREHOUSE_SERVICE_TOKEN` present, `ORDER_SERVICE_URL` present, `WAREHOUSE_SERVICE_URL` present, `AUTH_SERVICE_URL` present.
 - Orders readback with the Heureka channel token remains forbidden by design; Orders readback and cleanup require an authorized Orders admin/global-superadmin Auth identity.
 - A short-lived Auth-validated token was generated inside the Auth pod for an existing authorized identity and was not printed or persisted.
 
@@ -291,20 +285,6 @@ The earlier blockers `[MISSING: successful Orders Warehouse reservation handoff 
 
 Remaining non-Orders item: `[UNKNOWN: external Heureka e-shop registration details]` for the owner-operated `sluzby.heureka.cz/shop-registration/company` flow.
 
-## 2026-07-02 Runtime Token Source Recheck
-
-Role: integration validator.
-
-- Vision: Heureka order forwarding should keep using the shared Orders contract and service-token shape used by other Alfares sales channels.
-- Goal Impact: close the remaining TASK-010 runtime-token-source uncertainty without creating or mutating orders.
-- System: Heureka service deployment, shared `OrderClientService`, Orders service URL config, and Warehouse preflight token config.
-- Feature: read-only Orders runtime readiness verifier.
-- Task: add and run `scripts/verify_heureka_orders_runtime_readiness.js` in source mode and pod runtime mode.
-- Execution Plan: verify source contract, manifest env refs, final smoke evidence, and current pod env-name presence only; do not print secret values and do not call mutating endpoints.
-- Coding Prompt: keep this as a verifier and documentation update only; no order ingestion, Orders mutation, Warehouse reservation, or cleanup flow is run in this pass.
-- Code: `scripts/verify_heureka_orders_runtime_readiness.js` plus `npm run verify:heureka-orders-runtime-readiness`.
-- Validation: source mode passes; pod runtime mode returned `contractVersion=heureka-orders-runtime-readiness.v1`, `readOnly=true`, `mutations=[]`, `resolvedOrdersUrlSource=ORDER_SERVICE_URL`, `resolvedInternalTokenSource=HEUREKA_INTERNAL_SERVICE_TOKEN`, and `resolvedWarehouseTokenSource=WAREHOUSE_SERVICE_TOKEN`. Only env presence and string lengths were printed; no token values were printed.
-
 ## 2026-07-03 Orders Token Priority And Rendered Lifecycle API Proof
 
 Role: channel integration owner.
@@ -316,7 +296,6 @@ Intent Preservation Chain:
 - System: Heureka `OrderClientService`, Catalog preflight, Orders create/readback, Warehouse reservation, Auth short-lived cleanup identity.
 - Feature: Heureka synthetic create/replay/reservation/cleanup plus dashboard orders-list lifecycle proof.
 - Task: keep Catalog-to-Heureka token path intact while making outbound Heureka-to-Orders calls use the Heureka service token.
-- Execution Plan: add Catalog auth headers to the smoke preflight, prefer `ORDERS_INTERNAL_SERVICE_TOKEN` / `JWT_TOKEN` before `HEUREKA_INTERNAL_SERVICE_TOKEN` in the Orders client, deploy, run preflight, run live smoke, cleanup, then probe `/heureka/dashboard/orders-list`.
 - Coding Prompt: do not print token values, raw order rows, customer PII, DB rows, provider payloads, payment refs, tracking values, or raw DOM.
 - Code: commit `a0dbb24` deployed as `localhost:5000/heureka-service:a0dbb24` and `localhost:5000/heureka-api-gateway:a0dbb24`.
 - Validation: preflight missing none; live smoke first POST `201`, replay POST `201`, stable order id true, Orders readback `200`, reservation statuses `reserved`, cleanup status `200`, cleanup cancelled true, missing none; dashboard orders-list HTTP `200`, total `6`, returned `6`, centralStatusCounts `available=4`, `missingId=2`, `stale=2`, `unknown=2`, and non-stale sample lifecycle `cancelled` with reservation/warehouse handoff `cancelled`.

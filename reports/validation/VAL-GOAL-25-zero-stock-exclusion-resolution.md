@@ -25,19 +25,9 @@ Remote-only workflow was used with `ssh alfares`; no project code was saved unde
 
 Repo states before the bounded source/report change:
 
-```text
-catalog-microservice: ## main...origin/main, head ac5c95b docs: record goal 25 live smoke refresh
-warehouse-microservice: ## main...origin/main, head 3581c7c refactor: update reservation expiry CronJob to use CLIPLOT_WAREHOUSE_SERVICE_TOKEN instead of JWT_SECRET
-heureka: ## main...origin/main, head 7ea1f79 docs: clarify heureka goal 25 report refresh
-```
-
 ## Warehouse Evidence
 
 Command:
-
-```bash
-ssh alfares 'TOKEN=$(kubectl get secret warehouse-microservice-secret -n statex-apps -o jsonpath="{.data.CLIPLOT_WAREHOUSE_SERVICE_TOKEN}" | base64 -d); curl -sS -X POST "https://warehouse.alfares.cz/api/stock/availability/batch" -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" --data "{\"productIds\":[\"2430757b-844f-4609-a3eb-7207efadec23\",\"7b54c897-be5d-401d-9293-24d115841a0f\",\"a25cd2d4-e061-4929-968b-44a1122ff7b9\",\"aa929535-0f44-43b1-bcb1-0944046ddc5e\",\"de59bad3-1585-4574-acf2-78489367d418\",\"dfd1001e-f2e3-4909-be87-6ae9546457dc\"]}"'
-```
 
 Result summary:
 
@@ -56,13 +46,7 @@ No Warehouse stock mutation was performed. `[MISSING: authoritative external sto
 
 ## Heureka Exclusion Mutations
 
-First attempt with `heureka-service-secret.JWT_TOKEN` returned `401 Missing or invalid Heureka feed mutation service token`; deployed Heureka env confirmed `HEUREKA_INTERNAL_SERVICE_TOKEN` comes from `catalog-microservice-secret.CATALOG_INTERNAL_SERVICE_TOKEN`.
-
 Command:
-
-```bash
-ssh alfares 'TOKEN=$(kubectl get secret catalog-microservice-secret -n statex-apps -o jsonpath="{.data.CATALOG_INTERNAL_SERVICE_TOKEN}" | base64 -d); for id in 2430757b-844f-4609-a3eb-7207efadec23 7b54c897-be5d-401d-9293-24d115841a0f a25cd2d4-e061-4929-968b-44a1122ff7b9 aa929535-0f44-43b1-bcb1-0944046ddc5e de59bad3-1585-4574-acf2-78489367d418 dfd1001e-f2e3-4909-be87-6ae9546457dc; do curl -sS -X DELETE "https://heureka.alfares.cz/heureka/products/$id/exclude" -H "Content-Type: application/json" -H "x-internal-service-token: $TOKEN" -H "x-service-name: heureka-service" --data "{\"feedType\":\"heureka_cz\",\"requestedBy\":\"goal-25-zero-stock-exclusion\"}"; done'
-```
 
 Result summary:
 
@@ -124,10 +108,6 @@ node --check scripts/verify_heureka_blocked_product_lanes.js
 Result: pass.
 
 Live verifier:
-
-```bash
-ssh alfares 'cd /home/ssf/Documents/Github/heureka && CATALOG_INTERNAL_SERVICE_TOKEN=$(kubectl get secret catalog-microservice-secret -n statex-apps -o jsonpath="{.data.CATALOG_INTERNAL_SERVICE_TOKEN}" | base64 -d) WAREHOUSE_SERVICE_TOKEN=$(kubectl get secret warehouse-microservice-secret -n statex-apps -o jsonpath="{.data.CLIPLOT_WAREHOUSE_SERVICE_TOKEN}" | base64 -d) HEUREKA_VERIFY_BASE_URL=https://heureka.alfares.cz CATALOG_SERVICE_URL=https://catalog.alfares.cz WAREHOUSE_SERVICE_URL=https://warehouse.alfares.cz npm --silent run verify:heureka-blocked-product-lanes >/tmp/heureka-zero-stock-after-verifier-fix.json'
-```
 
 Result summary:
 
