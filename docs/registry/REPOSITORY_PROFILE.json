@@ -15,8 +15,12 @@
     "SYSTEM.md",
     "TASKS.md",
     "STATE.json",
-    "docs/registry/REPOSITORY_PROFILE.json",
+    "docs/11_tasks/TASK-001-bootstrap-service.md",
+    "docs/12_validation/VAL-TASK-001-bootstrap-service.md",
+    "docs/21_execution_plans/EP-TASK-001-bootstrap-service.md",
+    "docs/22_goal_impact/GOAL-IMPACT-TASK-001.md",
     "docs/registry/ARTIFACT_INDEX.json",
+    "docs/registry/REPOSITORY_PROFILE.json",
     "reports/validation/2026-08-30-wave-0-v1-registry-validation.json"
   ],
   "excluded_path_patterns": [
