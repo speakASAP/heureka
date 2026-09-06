@@ -65,6 +65,14 @@ spec:
                 secretKeyRef:
                   name: heureka-service-secret
                   key: ORDERS_SERVICE_TOKEN
+            # Same rule as the note above: this deployment maps secret keys one
+            # by one, so the ExternalSecret entry alone does NOT reach the
+            # container. Per-pair principal for the catalog lane.
+            - name: CATALOG_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: heureka-service-secret
+                  key: CATALOG_SERVICE_TOKEN
             # Inbound guard credential (HeurekaFeedMutationGuard /
             # HeurekaOrderIngestionGuard). Same no-`envFrom` caveat as above: it
             # reaches the container only because it is named here. Previously the

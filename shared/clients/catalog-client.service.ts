@@ -558,24 +558,26 @@ export class CatalogClientService {
    * this static header). Keeping them made a missing credential look like a
    * configured one and produced a 401 that named the wrong cause.
    *
-   * NOTE: CATALOG_INTERNAL_SERVICE_TOKEN is currently unset in production, so this
-   * lane returns null and its callers surface the missing credential. That is a
-   * pre-existing outage, not one introduced here — see plan section 6z.
+   * Now carries the per-pair principal for heureka-service ->
+   * catalog-microservice (role internal:catalog-microservice:write) as a bearer.
+   *
+   * This also repairs the outage the previous note recorded: the shared
+   * CATALOG_INTERNAL_SERVICE_TOKEN was never mapped into this service's
+   * ExternalSecret, so the lane returned null and failed every caller. There is
+   * deliberately no fallback to that shared secret — it was one static value
+   * held by seven services with a self-asserted x-service-name header, the shape
+   * SERVICE_IDENTITY_CONSUMER_STANDARD.md prohibits, and catalog still accepts
+   * it, so a fallback would authenticate successfully and hide the regression.
    */
   private getCatalogInternalServiceHeaders(): Record<string, string> | null {
-    const internalToken = (
-      process.env.CATALOG_INTERNAL_SERVICE_TOKEN ||
-      process.env.INTERNAL_SERVICE_TOKEN ||
-      ''
-    ).trim();
+    const pairToken = (process.env.CATALOG_SERVICE_TOKEN || '').trim();
 
-    if (!internalToken) {
+    if (!pairToken) {
       return null;
     }
 
     return {
-      'x-internal-service-token': internalToken,
-      'x-service-name': 'heureka-service',
+      Authorization: pairToken.startsWith('Bearer ') ? pairToken : `Bearer ${pairToken}`,
     };
   }
 

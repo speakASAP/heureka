@@ -12,13 +12,13 @@ function assertTruthy(value: unknown, message: string): void {
 }
 
 async function main(): Promise<void> {
-  const previousCatalogToken = process.env.CATALOG_INTERNAL_SERVICE_TOKEN;
+  const previousCatalogToken = process.env.CATALOG_SERVICE_TOKEN;
   const previousHeurekaToken = process.env.HEUREKA_INTERNAL_SERVICE_TOKEN;
   const previousInternalToken = process.env.INTERNAL_SERVICE_TOKEN;
   const previousJwtToken = process.env.JWT_TOKEN;
   const previousCatalogUrl = process.env.CATALOG_SERVICE_URL;
   process.env.CATALOG_SERVICE_URL = 'http://catalog.test';
-  delete process.env.CATALOG_INTERNAL_SERVICE_TOKEN;
+  process.env.CATALOG_SERVICE_TOKEN = 'heureka-service-token';
   process.env.HEUREKA_INTERNAL_SERVICE_TOKEN = 'heureka-service-token';
   delete process.env.INTERNAL_SERVICE_TOKEN;
   delete process.env.JWT_TOKEN;
@@ -72,9 +72,12 @@ async function main(): Promise<void> {
 
   assertEqual(calls.length, 11);
   for (const call of calls) {
-    assertEqual(call.config?.headers?.['x-internal-service-token'], 'heureka-service-token');
-    assertEqual(call.config?.headers?.['x-service-name'], 'heureka-service');
-    assertEqual(call.config?.headers?.Authorization, undefined);
+    // Per-pair principal as a bearer; the prohibited shared-secret headers must
+    // not be sent. Catalog still accepts them until the last caller migrates, so
+    // a regression would authenticate successfully and be invisible.
+    assertEqual(call.config?.headers?.Authorization, 'Bearer heureka-service-token');
+    assertEqual(call.config?.headers?.['x-internal-service-token'], undefined);
+    assertEqual(call.config?.headers?.['x-service-name'], undefined);
   }
   assertTruthy(calls[0].url.endsWith('/api/products/product%201'), 'product id should be encoded');
   assertTruthy(calls[1].url.endsWith('/api/products/sku/sku%2F1'), 'sku should be encoded');
@@ -102,7 +105,7 @@ async function main(): Promise<void> {
   assertEqual(calls[14].body.sourceApplication, 'heureka-service');
   assertTruthy(calls[14].url.endsWith('/api/catalog/access/provision'), 'catalog provisioning endpoint should be used');
 
-  if (previousCatalogToken === undefined) delete process.env.CATALOG_INTERNAL_SERVICE_TOKEN; else process.env.CATALOG_INTERNAL_SERVICE_TOKEN = previousCatalogToken;
+  if (previousCatalogToken === undefined) delete process.env.CATALOG_SERVICE_TOKEN; else process.env.CATALOG_SERVICE_TOKEN = previousCatalogToken;
   if (previousHeurekaToken === undefined) delete process.env.HEUREKA_INTERNAL_SERVICE_TOKEN; else process.env.HEUREKA_INTERNAL_SERVICE_TOKEN = previousHeurekaToken;
   if (previousInternalToken === undefined) delete process.env.INTERNAL_SERVICE_TOKEN; else process.env.INTERNAL_SERVICE_TOKEN = previousInternalToken;
   if (previousJwtToken === undefined) delete process.env.JWT_TOKEN; else process.env.JWT_TOKEN = previousJwtToken;
