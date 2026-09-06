@@ -29,12 +29,14 @@ function optionalString(value) {
   return text || null;
 }
 
+// Per-pair principal for heureka-service -> catalog-microservice. No fallback
+// to the shared CATALOG_INTERNAL_SERVICE_TOKEN / INTERNAL_SERVICE_TOKEN: that
+// was one static secret held by seven services with a self-asserted
+// x-service-name header, the shape SERVICE_IDENTITY_CONSUMER_STANDARD.md
+// prohibits.
 function getCatalogInternalToken() {
   return optionalString(
-    process.env.CATALOG_INTERNAL_SERVICE_TOKEN ||
-    process.env.HEUREKA_INTERNAL_SERVICE_TOKEN ||
-    process.env.INTERNAL_SERVICE_TOKEN ||
-    process.env.JWT_TOKEN,
+    process.env.CATALOG_SERVICE_TOKEN,
   );
 }
 
@@ -49,8 +51,7 @@ function getWarehouseToken() {
 function catalogHeaders() {
   const token = getCatalogInternalToken();
   return token ? {
-    'x-internal-service-token': token,
-    'x-service-name': 'heureka-service',
+    Authorization: `Bearer ${token}`,
   } : {};
 }
 

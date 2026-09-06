@@ -65,12 +65,17 @@ function warehouseHeaders() {
   return token ? { Authorization: bearer(token.value) } : {};
 }
 
+// Per-pair principal for heureka-service -> catalog-microservice, sent as a
+// bearer. No fallback to the shared CATALOG_INTERNAL_SERVICE_TOKEN /
+// INTERNAL_SERVICE_TOKEN: that was one static secret held by seven services
+// with a self-asserted x-service-name header, the shape
+// SERVICE_IDENTITY_CONSUMER_STANDARD.md prohibits. internalHeaders() below is a
+// DIFFERENT lane -- heureka's own inbound guard credential -- and is unchanged.
 function catalogHeaders() {
-  const token = firstPresent(['CATALOG_INTERNAL_SERVICE_TOKEN', 'HEUREKA_INTERNAL_SERVICE_TOKEN', 'INTERNAL_SERVICE_TOKEN', 'JWT_TOKEN']);
+  const token = firstPresent(['CATALOG_SERVICE_TOKEN']);
   if (!token) return {};
   return {
-    'x-internal-service-token': token.value,
-    'x-service-name': 'heureka-service',
+    Authorization: `Bearer ${token.value}`,
   };
 }
 
