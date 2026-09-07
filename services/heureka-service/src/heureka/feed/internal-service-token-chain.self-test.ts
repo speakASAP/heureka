@@ -1,11 +1,8 @@
 /**
- * Session F regression guard.
+ * Auth RS256 regression guard for Heureka inbound S2S routes.
  *
- * Both inbound guards (HeurekaFeedMutationGuard, HeurekaOrderIngestionGuard) used to
- * fall through to process.env.JWT_TOKEN, which holds the shared `a2880693` value —
- * one string that was simultaneously the credential for five other services and
- * cannot be revoked per-caller. This asserts that fallback is gone, so a well-meaning
- * "restore the fallback" edit fails loudly instead of silently re-sharing the value.
+ * Static HEUREKA_INTERNAL_SERVICE_TOKEN / INTERNAL_SERVICE_TOKEN /
+ * x-internal-service-token / x-service-name paths must stay deleted.
  */
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -34,12 +31,28 @@ for (const file of GUARDS) {
     !/process\.env\.JWT_TOKEN/.test(source),
   );
   check(
-    `${short}: still accepts its own HEUREKA_INTERNAL_SERVICE_TOKEN`,
-    /process\.env\.HEUREKA_INTERNAL_SERVICE_TOKEN/.test(source),
+    `${short}: does not accept HEUREKA_INTERNAL_SERVICE_TOKEN`,
+    !/process\.env\.HEUREKA_INTERNAL_SERVICE_TOKEN/.test(source),
   );
   check(
-    `${short}: still compares in constant time`,
-    /timingSafeEqual/.test(source),
+    `${short}: does not accept INTERNAL_SERVICE_TOKEN`,
+    !/process\.env\.INTERNAL_SERVICE_TOKEN/.test(source),
+  );
+  check(
+    `${short}: does not compare static tokens`,
+    !/timingSafeEqual/.test(source),
+  );
+  check(
+    `${short}: validates via Auth /auth/validate`,
+    /\/auth\/validate/.test(source),
+  );
+  check(
+    `${short}: requires Authorization Bearer`,
+    /Missing bearer token/.test(source) && /authorization/.test(source),
+  );
+  check(
+    `${short}: enforces internal:heureka-service role`,
+    /internal:heureka-service:/.test(source),
   );
 }
 

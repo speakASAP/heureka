@@ -33,26 +33,26 @@ function envPresence(keys) {
 
 function verifyHeurekaSource() {
   const guard = read(root, 'services/heureka-service/src/heureka/feed/feed-mutation.guard.ts');
+  const orderGuard = read(root, 'services/heureka-service/src/heureka/orders/order-ingestion.guard.ts');
   const feedController = read(root, 'services/heureka-service/src/heureka/feed/feed.controller.ts');
   const productsController = read(root, 'services/heureka-service/src/heureka/feed/products.controller.ts');
-  const deployment = read(root, 'k8s/deployment.yaml');
-  const checklist = read(root, 'docs/orchestrator/TASK-010-channel-parity-checklist.md');
 
-  assert.match(guard, /process\.env\.HEUREKA_INTERNAL_SERVICE_TOKEN/);
-  assert.match(guard, /process\.env\.INTERNAL_SERVICE_TOKEN/);
-  assert.match(guard, /process\.env\.JWT_TOKEN/);
-  assert.match(guard, /request\.headers\['x-internal-service-token'\]/);
-  assert.match(guard, /request\.headers\['x-service-name'\]/);
-  assert.match(guard, /serviceName === 'catalog-microservice'/);
-  assert.match(guard, /serviceName === 'heureka-service'/);
-  assert.match(guard, /timingSafeEqual/);
+  assert.match(guard, /\/auth\/validate/);
+  assert.match(guard, /internal:heureka-service:feed/);
+  assert.match(guard, /Missing bearer token/);
+  assert.doesNotMatch(guard, /process\.env\.HEUREKA_INTERNAL_SERVICE_TOKEN/);
+  assert.doesNotMatch(guard, /process\.env\.INTERNAL_SERVICE_TOKEN/);
+  assert.doesNotMatch(guard, /request\.headers\[['\"]x-internal-service-token['\"]\]/);
+  assert.doesNotMatch(guard, /request\.headers\[['\"]x-service-name['\"]\]/);
+  assert.doesNotMatch(guard, /timingSafeEqual/);
+
+  assert.match(orderGuard, /\/auth\/validate/);
+  assert.match(orderGuard, /internal:heureka-service:orders/);
+  assert.doesNotMatch(orderGuard, /process\.env\.HEUREKA_INTERNAL_SERVICE_TOKEN/);
 
   assert.match(feedController, /@Post\('regenerate'\)[\s\S]*@UseGuards\(HeurekaFeedMutationGuard\)/);
   assert.match(productsController, /@Post\(':productId\/include'\)[\s\S]*@UseGuards\(HeurekaFeedMutationGuard\)/);
   assert.match(productsController, /@Delete\(':productId\/exclude'\)[\s\S]*@UseGuards\(HeurekaFeedMutationGuard\)/);
-
-  assert.match(deployment, /name: HEUREKA_INTERNAL_SERVICE_TOKEN[\s\S]*name: catalog-microservice-secret[\s\S]*key: CATALOG_INTERNAL_SERVICE_TOKEN/);
-  assert.ok(checklist.includes('[RESOLVED: Catalog-to-Heureka internal service token source]'), 'TASK-010 checklist must record the resolved token-source decision');
 }
 
 function verifyCatalogSource(report) {
@@ -67,16 +67,22 @@ function verifyCatalogSource(report) {
   }
 
   const service = read(catalogRoot, 'src/products/products.service.ts');
-  const externalSecret = read(catalogRoot, 'k8s/external-secret.yaml');
-  assert.match(service, /process\.env\.HEUREKA_INTERNAL_SERVICE_TOKEN/);
-  assert.match(service, /process\.env\.HEUREKA_SERVICE_TOKEN/);
-  assert.match(service, /process\.env\.INTERNAL_SERVICE_TOKEN/);
-  assert.match(service, /process\.env\.CATALOG_INTERNAL_SERVICE_TOKEN/);
-  assert.match(service, /'x-internal-service-token': token/);
-  assert.match(service, /'x-service-name': 'catalog-microservice'/);
   assert.match(service, /\/heureka\/products\/\$\{encodeURIComponent\(id\)\}\/include/);
-  assert.match(externalSecret, /secretKey: CATALOG_INTERNAL_SERVICE_TOKEN[\s\S]*key: secret\/prod\/auth-microservice[\s\S]*property: CATALOG_INTERNAL_SERVICE_TOKEN/);
-  report.catalogSource = { checked: true, root: catalogRoot };
+  const stillStatic =
+    /process\.env\.HEUREKA_INTERNAL_SERVICE_TOKEN/.test(service) ||
+    /'x-internal-service-token':\s*token/.test(service);
+  report.catalogSource = {
+    checked: true,
+    root: catalogRoot,
+    heurekaCallerAuth: stillStatic
+      ? '[OPEN: catalog outbound still uses static Heureka token headers; must send Auth RS256 Bearer with role internal:heureka-service:feed]'
+      : 'Auth Bearer expected',
+  };
+  if (stillStatic && requireCatalogSource) {
+    report.blockers.push(
+      '[OPEN: catalog-microservice Heureka caller must migrate to Auth RS256 Bearer (internal:heureka-service:feed)]',
+    );
+  }
 }
 
 const report = {
@@ -87,9 +93,9 @@ const report = {
   blockers: [],
   source: {
     guard: 'HeurekaFeedMutationGuard',
-    acceptedServices: ['catalog-microservice', 'heureka-service'],
-    acceptedTokenSources: ['HEUREKA_INTERNAL_SERVICE_TOKEN', 'INTERNAL_SERVICE_TOKEN', 'JWT_TOKEN'],
-    manifestSource: 'catalog-microservice-secret/CATALOG_INTERNAL_SERVICE_TOKEN',
+    auth: 'POST /auth/validate',
+    requiredRoles: ['internal:heureka-service:feed'],
+    rejectedLegacy: ['HEUREKA_INTERNAL_SERVICE_TOKEN', 'INTERNAL_SERVICE_TOKEN', 'JWT_TOKEN', 'x-internal-service-token', 'x-service-name'],
     catalogSourceRoot: catalogRoot,
   },
 };
@@ -101,16 +107,16 @@ if (!runtimeMode) {
 
 if (runtimeMode) {
   const runtimeKeys = [
-    'HEUREKA_INTERNAL_SERVICE_TOKEN',
-    'INTERNAL_SERVICE_TOKEN',
-    'JWT_TOKEN',
+    'AUTH_SERVICE_URL',
+    'HEUREKA_SERVICE_TOKEN',
   ];
-  const token = firstPresent(runtimeKeys);
   report.runtime = {
     envPresence: envPresence(runtimeKeys),
-    resolvedHeurekaTokenSource: token?.key || null,
+    note: 'Inbound guards validate Auth RS256 Bearer via /auth/validate; static HEUREKA_INTERNAL_SERVICE_TOKEN is deleted',
   };
-  if (!token) report.blockers.push('[MISSING: Heureka internal service token runtime env]');
+  if (!process.env.AUTH_SERVICE_URL) {
+    report.blockers.push('[MISSING: AUTH_SERVICE_URL for Auth validate]');
+  }
 }
 
 if (report.blockers.length) {

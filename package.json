@@ -26,7 +26,8 @@
     "verify:heureka-bundle-publication-policy": "node scripts/verify_heureka_bundle_publication_policy.js",
     "verify:orders-lifecycle-ui": "npm run verify:heureka-orders-runtime-readiness",
     "verify:business-health-heureka-channel-contract": "node scripts/verify-business-health-heureka-channel-contract.js",
-    "verify:internal-service-token-chain": "npx ts-node --skip-ignore --compiler-options '{\"types\":[\"node\"]}' services/heureka-service/src/heureka/feed/internal-service-token-chain.self-test.ts"
+    "verify:internal-service-token-chain": "npx ts-node --skip-ignore --compiler-options '{\"types\":[\"node\"]}' services/heureka-service/src/heureka/feed/internal-service-token-chain.self-test.ts",
+    "verify:heureka-auth-guards": "npx ts-node --skip-ignore --compiler-options '{\"experimentalDecorators\":true,\"emitDecoratorMetadata\":true,\"types\":[\"node\"]}' services/heureka-service/src/heureka/orders/heureka-auth-guards.self-test.ts"
   },
   "dependencies": {
     "@nestjs/axios": "^3.0.1",
