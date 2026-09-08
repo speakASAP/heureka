@@ -242,7 +242,7 @@ Intent Preservation Chain:
 - Task: Re-run the smoke after Orders/Warehouse reservation readiness and record sanitized evidence without token values, order IDs, customer payloads, database rows, or payment data.
 - Execution Plan: Run pod-local preflight, run live create/replay, use an explicit short-lived Orders admin token for readback and approved synthetic cleanup, and verify no `[MISSING: ...]` markers remain.
 - Coding Prompt: Keep channel create auth unchanged; add only smoke-runner support for explicit Orders admin readback/cleanup and a required cancellation approval body.
-- Code: `scripts/smoke_heureka_order_ingestion_live.js` now supports `HEUREKA_ORDER_SMOKE_ORDERS_ADMIN_TOKEN` / `ORDERS_ADMIN_TOKEN` for Orders readback and approved synthetic cleanup. Normal create/replay still uses Heureka internal service headers.
+- Code: `scripts/smoke_heureka_order_ingestion_live.js` now supports `HEUREKA_ORDER_SMOKE_ORDERS_ADMIN_TOKEN` / `ORDERS_ADMIN_TOKEN` for Orders readback and approved synthetic cleanup. Normal create/replay still uses Heureka→Orders Auth RS256 pair principal Bearer per [`SERVICE_IDENTITY_CONSUMER_STANDARD.md`](../../../auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md).
 - Validation: See sanitized command evidence below.
 
 ### Current Runtime Evidence
