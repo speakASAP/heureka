@@ -20,9 +20,12 @@ assert.match(service, /reservableRoutes\.length === 1/);
 assert.match(service, /multiple Warehouse routes/);
 assert.match(client, /contractVersion: CREATE_ORDER_CONTRACT_VERSION/);
 assert.match(client, /warehouseId\?: string/);
-assert.match(client, /x-internal-service-token/);
-assert.match(client, /x-service-name/);
-assert.match(client, /heureka-service/);
+assert.match(client, /ORDERS_SERVICE_TOKEN/);
+assert.match(client, /Authorization/);
+assert.doesNotMatch(client, /['"]x-internal-service-token['"]/);
+assert.doesNotMatch(client, /['"]x-service-name['"]/);
+assert.doesNotMatch(client, /ORDERS_INTERNAL_SERVICE_TOKEN/);
+assert.doesNotMatch(client, /INTERNAL_SERVICE_TOKEN/);
 
 for (const required of [
   'Vision -> Goal Impact -> System -> Feature -> Task -> Execution Plan -> Coding Prompt -> Code -> Validation',

@@ -38,19 +38,21 @@ function verifySourceContracts() {
   assert.match(orderClient, /process\.env\.ORDERS_MICROSERVICE_URL/);
   assert.match(orderClient, /process\.env\.ORDER_SERVICE_URL/);
   assert.match(orderClient, /process\.env\.ORDERS_SERVICE_TOKEN/);
-  assert.match(orderClient, /process\.env\.ORDERS_INTERNAL_SERVICE_TOKEN/);
-  assert.match(orderClient, /process\.env\.JWT_TOKEN/);
-  assert.match(orderClient, /process\.env\.HEUREKA_INTERNAL_SERVICE_TOKEN/);
-  assert.match(orderClient, /process\.env\.INTERNAL_SERVICE_TOKEN/);
-  assert.match(orderClient, /headers\['x-internal-service-token'\]/);
-  assert.match(orderClient, /headers\['x-service-name'\] = 'heureka-service'/);
+  assert.doesNotMatch(orderClient, /process\.env\.ORDERS_INTERNAL_SERVICE_TOKEN/);
+  assert.doesNotMatch(orderClient, /process\.env\.INTERNAL_SERVICE_TOKEN/);
+  assert.doesNotMatch(orderClient, /['"]x-internal-service-token['"]/);
+  assert.doesNotMatch(orderClient, /['"]x-service-name['"]/);
+  assert.match(orderClient, /Authorization/);
+  assert.match(orderClient, /\[MISSING: Orders runtime credential\]/);
 
-  assert.match(deployment, /name: JWT_TOKEN/);
+  assert.match(deployment, /name: ORDERS_SERVICE_TOKEN/);
+  assert.match(deployment, /key: ORDERS_SERVICE_TOKEN/);
   assert.match(deployment, /name: HEUREKA_INTERNAL_SERVICE_TOKEN/);
-  assert.match(deployment, /key: CATALOG_INTERNAL_SERVICE_TOKEN/);
   assert.match(deployment, /name: WAREHOUSE_SERVICE_TOKEN/);
   assert.match(deployment, /name: warehouse-microservice-secret/);
   assert.match(deployment, /key: CLIPLOT_WAREHOUSE_SERVICE_TOKEN/);
+  assert.doesNotMatch(deployment, /name: JWT_TOKEN/);
+  assert.doesNotMatch(deployment, /key: CATALOG_INTERNAL_SERVICE_TOKEN/);
   assert.match(configmap, /ORDER_SERVICE_URL: "http:\/\/orders-microservice:3203"/);
   assert.match(configmap, /WAREHOUSE_SERVICE_URL: "http:\/\/warehouse-microservice:3201"/);
 
@@ -101,10 +103,10 @@ const report = {
   source: {
     orderClientContract: 'orders.create.v1',
     orderServiceUrlFallbacks: ['ORDERS_SERVICE_URL', 'ORDERS_MICROSERVICE_URL', 'ORDER_SERVICE_URL'],
-    orderAuthSources: ['ORDERS_SERVICE_TOKEN', 'ORDERS_INTERNAL_SERVICE_TOKEN', 'JWT_TOKEN', 'HEUREKA_INTERNAL_SERVICE_TOKEN', 'INTERNAL_SERVICE_TOKEN'],
+    orderAuthSources: ['ORDERS_SERVICE_TOKEN'],
     manifestEnvRefs: {
       ORDER_SERVICE_URL: 'heureka-config',
-      ORDERS_INTERNAL_SERVICE_TOKEN: 'optional explicit Orders token',
+      ORDERS_SERVICE_TOKEN: 'required per-pair RS256 Bearer for orders-microservice',
       HEUREKA_INTERNAL_SERVICE_TOKEN: 'catalog-microservice-secret/CATALOG_INTERNAL_SERVICE_TOKEN',
       JWT_TOKEN: 'heureka-service-secret/JWT_TOKEN',
       WAREHOUSE_SERVICE_TOKEN: 'warehouse-microservice-secret/CLIPLOT_WAREHOUSE_SERVICE_TOKEN',
@@ -125,24 +127,20 @@ if (runtimeMode) {
     'ORDER_SERVICE_URL',
     'ORDERS_SERVICE_URL',
     'ORDERS_MICROSERVICE_URL',
-    'JWT_TOKEN',
     'ORDERS_SERVICE_TOKEN',
-    'ORDERS_INTERNAL_SERVICE_TOKEN',
-    'HEUREKA_INTERNAL_SERVICE_TOKEN',
-    'INTERNAL_SERVICE_TOKEN',
     'WAREHOUSE_SERVICE_TOKEN',
   ];
   const ordersUrl = firstPresent(['ORDERS_SERVICE_URL', 'ORDERS_MICROSERVICE_URL', 'ORDER_SERVICE_URL']);
-  const internalToken = firstPresent(['ORDERS_INTERNAL_SERVICE_TOKEN', 'JWT_TOKEN', 'HEUREKA_INTERNAL_SERVICE_TOKEN', 'INTERNAL_SERVICE_TOKEN']);
+  const ordersToken = firstPresent(['ORDERS_SERVICE_TOKEN']);
   const warehouseToken = firstPresent(['WAREHOUSE_SERVICE_TOKEN', 'JWT_TOKEN', 'SERVICE_TOKEN']);
   report.runtime = {
     envPresence: envPresence(runtimeKeys),
     resolvedOrdersUrlSource: ordersUrl?.key || null,
-    resolvedInternalTokenSource: internalToken?.key || null,
+    resolvedOrdersTokenSource: ordersToken?.key || null,
     resolvedWarehouseTokenSource: warehouseToken?.key || null,
   };
   if (!ordersUrl) report.blockers.push('[MISSING: Orders service URL runtime env]');
-  if (!internalToken) report.blockers.push('[MISSING: Heureka-to-Orders internal token runtime env]');
+  if (!ordersToken) report.blockers.push('[MISSING: ORDERS_SERVICE_TOKEN runtime env]');
   if (!warehouseToken) report.blockers.push('[MISSING: Warehouse token runtime env for order route preflight]');
 }
 

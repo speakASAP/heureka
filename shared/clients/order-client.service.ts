@@ -118,6 +118,9 @@ export class OrderClientService {
       this.logger.log('Order accepted by orders-microservice: ' + response.data.data?.id, 'OrderClient');
       return response.data.data;
     } catch (error: any) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       const status = error?.response?.status;
       const message = status === HttpStatus.CONFLICT
         ? ORDER_IDEMPOTENCY_CONFLICT
@@ -238,37 +241,21 @@ export class OrderClientService {
   }
 
   private getAuthHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {};
+    // Per-pair RS256 principal for heureka-service -> orders-microservice.
+    // Bearer only — no legacy static dual-send headers or INTERNAL_* fallback.
     const bearer = process.env.ORDERS_SERVICE_TOKEN?.trim();
-    if (bearer) {
-      headers.Authorization = bearer.startsWith('Bearer ') ? bearer : `Bearer ${bearer}`;
+    if (!bearer) {
+      this.logger.error(
+        'ORDERS_SERVICE_TOKEN is unset; refusing to call orders-microservice '
+          + 'unauthenticated. Set the per-pair RS256 principal for '
+          + 'heureka-service -> orders-microservice.',
+        undefined,
+        'OrderClient',
+      );
+      throw new HttpException('[MISSING: Orders runtime credential]', HttpStatus.SERVICE_UNAVAILABLE);
     }
-
-    // Cutover fallback: the shared static credential, where orders derives identity
-    // from x-service-name rather than from the token. Retired once this lane is
-    // verified on the Bearer path; loud on every use so it cannot rot unnoticed.
-    // JWT_TOKEN and HEUREKA_INTERNAL_SERVICE_TOKEN are deliberately NOT in this
-    // chain: both resolve to the shared a2880693 value, which orders stopped
-    // accepting from any caller when header-chosen identity was closed. Leaving
-    // them here would keep the value mounted for a path that can only 401.
-    const internalToken = (
-      process.env.ORDERS_INTERNAL_SERVICE_TOKEN ||
-      process.env.INTERNAL_SERVICE_TOKEN ||
-      ''
-    ).trim();
-    if (internalToken) {
-      if (!bearer) {
-        this.logger.error(
-          'ORDERS_SERVICE_TOKEN is unset; falling back to the shared static internal '
-            + 'header for orders-microservice. This credential is header-authenticated '
-            + 'and scheduled for retirement — set ORDERS_SERVICE_TOKEN.',
-          undefined,
-          'OrderClient',
-        );
-      }
-      headers['x-internal-service-token'] = internalToken;
-      headers['x-service-name'] = 'heureka-service';
-    }
-    return headers;
+    return {
+      Authorization: bearer.startsWith('Bearer ') ? bearer : `Bearer ${bearer}`,
+    };
   }
 }

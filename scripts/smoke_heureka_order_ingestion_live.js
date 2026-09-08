@@ -98,12 +98,8 @@ function ordersHeaders() {
   }
 
   const ordersToken = firstPresent(['ORDERS_SERVICE_TOKEN']);
-  if (ordersToken) headers.Authorization = bearer(ordersToken.value);
-
-  const internalToken = firstPresent(['HEUREKA_INTERNAL_SERVICE_TOKEN', 'INTERNAL_SERVICE_TOKEN', 'JWT_TOKEN']);
-  if (internalToken) {
-    headers['x-internal-service-token'] = internalToken.value;
-    headers['x-service-name'] = 'heureka-service';
+  if (ordersToken) {
+    headers.Authorization = bearer(ordersToken.value);
   }
   return headers;
 }
