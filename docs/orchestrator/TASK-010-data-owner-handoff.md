@@ -195,10 +195,11 @@ ssh alfares 'cd /home/ssf/Documents/Github/heureka-service && npm run verify:heu
 ssh alfares 'cd /home/ssf/Documents/Github/heureka-service && curl -k -I https://heureka.alfares.cz/heureka/feed?type=heureka_cz'
 ```
 
-For dashboard lane proof, use a real logged-in dashboard session or an in-pod admin JWT smoke:
+For dashboard lane proof, use a real logged-in dashboard session (Auth-issued human JWT per [`CONSUMER_JWT_VALIDATION_STANDARD.md`](../../../auth-microservice/docs/CONSUMER_JWT_VALIDATION_STANDARD.md)). Do not mint JWTs from `JWT_SECRET`. Machine calls use [`SERVICE_IDENTITY_CONSUMER_STANDARD.md`](../../../auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md).
 
 ```bash
-ssh alfares 'kubectl -n statex-apps exec deploy/heureka-service -- node -e "<generate short-lived JWT from JWT_SECRET and GET /heureka/dashboard/readiness/lanes>"'
+# Prefer an authenticated browser/session cookie against
+# GET /heureka/dashboard/readiness/lanes — no local JWT mint.
 ```
 
 Success conditions:
