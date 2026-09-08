@@ -40,11 +40,11 @@ spec:
             # (SERVICE_CREDENTIAL_PROBER_PLAN.md Task A). This deployment maps secret
             # keys one by one rather than with envFrom: secretRef, so adding the key
             # to the ExternalSecret alone does NOT reach the container.
-            - name: NOTIFICATION_SERVICE_TOKEN
+            - name: MONITORING_INGEST_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: heureka-service-secret
-                  key: NOTIFICATION_SERVICE_TOKEN
+                  key: MONITORING_INGEST_SERVICE_TOKEN
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
