@@ -47,12 +47,13 @@ function verifySourceContracts() {
 
   assert.match(deployment, /name: ORDERS_SERVICE_TOKEN/);
   assert.match(deployment, /key: ORDERS_SERVICE_TOKEN/);
-  assert.match(deployment, /name: HEUREKA_INTERNAL_SERVICE_TOKEN/);
+  assert.doesNotMatch(deployment, /name: HEUREKA_INTERNAL_SERVICE_TOKEN/);
   assert.match(deployment, /name: WAREHOUSE_SERVICE_TOKEN/);
-  assert.match(deployment, /name: warehouse-microservice-secret/);
-  assert.match(deployment, /key: CLIPLOT_WAREHOUSE_SERVICE_TOKEN/);
+  assert.match(deployment, /name: heureka-service-secret/);
+  assert.match(deployment, /key: WAREHOUSE_SERVICE_TOKEN/);
   assert.doesNotMatch(deployment, /name: JWT_TOKEN/);
   assert.doesNotMatch(deployment, /key: CATALOG_INTERNAL_SERVICE_TOKEN/);
+  assert.doesNotMatch(deployment, /key: CLIPLOT_WAREHOUSE_SERVICE_TOKEN/);
   assert.match(configmap, /ORDER_SERVICE_URL: "http:\/\/orders-microservice:3203"/);
   assert.match(configmap, /WAREHOUSE_SERVICE_URL: "http:\/\/warehouse-microservice:3201"/);
 
@@ -107,9 +108,9 @@ const report = {
     manifestEnvRefs: {
       ORDER_SERVICE_URL: 'heureka-config',
       ORDERS_SERVICE_TOKEN: 'required per-pair RS256 Bearer for orders-microservice',
-      HEUREKA_INTERNAL_SERVICE_TOKEN: 'catalog-microservice-secret/CATALOG_INTERNAL_SERVICE_TOKEN',
+      // HEUREKA_INTERNAL_SERVICE_TOKEN removed — inbound Auth RS256 only
       JWT_TOKEN: 'heureka-service-secret/JWT_TOKEN',
-      WAREHOUSE_SERVICE_TOKEN: 'warehouse-microservice-secret/CLIPLOT_WAREHOUSE_SERVICE_TOKEN',
+      WAREHOUSE_SERVICE_TOKEN: 'heureka-service-secret/WAREHOUSE_SERVICE_TOKEN',
     },
     sourceContractsVerified: !runtimeMode,
     runtimeModeNote: runtimeMode ? 'source assertions skipped; run without --runtime in the repository to verify source files' : null,

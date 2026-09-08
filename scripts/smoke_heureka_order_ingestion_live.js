@@ -80,7 +80,7 @@ function catalogHeaders() {
 }
 
 function internalHeaders() {
-  const token = firstPresent(['HEUREKA_INTERNAL_SERVICE_TOKEN', 'INTERNAL_SERVICE_TOKEN', 'JWT_TOKEN']);
+  const token = firstPresent(['CATALOG_SERVICE_TOKEN', 'ORDERS_SERVICE_TOKEN']);
   if (!token) return null;
   return {
     'content-type': 'application/json',
@@ -257,7 +257,7 @@ async function collectPreflight() {
   if (!Number.isInteger(quantity) || quantity <= 0) {
     missing.push('[MISSING: positive smoke quantity]');
   }
-  if (!firstPresent(['HEUREKA_INTERNAL_SERVICE_TOKEN', 'INTERNAL_SERVICE_TOKEN', 'JWT_TOKEN'])) {
+  if (!firstPresent(['CATALOG_SERVICE_TOKEN', 'ORDERS_SERVICE_TOKEN'])) {
     missing.push('[MISSING: Heureka internal service token]');
   }
   if (!firstPresent(['WAREHOUSE_SERVICE_TOKEN', 'JWT_TOKEN', 'SERVICE_TOKEN'])) {
