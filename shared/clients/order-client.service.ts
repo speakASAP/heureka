@@ -241,8 +241,7 @@ export class OrderClientService {
   }
 
   private getAuthHeaders(): Record<string, string> {
-    // Per-pair RS256 principal for heureka-service -> orders-microservice.
-    // Bearer only — no legacy static dual-send headers or INTERNAL_* fallback.
+    // S2S: auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md
     const bearer = process.env.ORDERS_SERVICE_TOKEN?.trim();
     if (!bearer) {
       this.logger.error(

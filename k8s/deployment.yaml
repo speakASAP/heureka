@@ -55,11 +55,7 @@ spec:
                 secretKeyRef:
                   name: warehouse-microservice-secret
                   key: CLIPLOT_WAREHOUSE_SERVICE_TOKEN
-            # Per-pair RS256 principal for heureka-service -> orders-microservice.
-            # This pod has no `envFrom: secretRef`, so a key existing in the
-            # ExternalSecret is NOT enough — it reaches the container only when
-            # named here. Omitting it is why ORDERS_SERVICE_TOKEN stayed unset and
-            # the lane silently kept using the shared a2880693 static header.
+            # S2S: auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md
             - name: ORDERS_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:

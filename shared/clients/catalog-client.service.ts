@@ -551,24 +551,7 @@ export class CatalogClientService {
     };
   }
 
-  /**
-   * HEUREKA_INTERNAL_SERVICE_TOKEN and JWT_TOKEN were removed from this chain on
-   * 2026-08-27: both resolve to the shared a2880693 value, and catalog rejects it
-   * ("Missing or invalid Authorization header" — catalog wants a Bearer token, not
-   * this static header). Keeping them made a missing credential look like a
-   * configured one and produced a 401 that named the wrong cause.
-   *
-   * Now carries the per-pair principal for heureka-service ->
-   * catalog-microservice (role internal:catalog-microservice:write) as a bearer.
-   *
-   * This also repairs the outage the previous note recorded: the shared
-   * CATALOG_INTERNAL_SERVICE_TOKEN was never mapped into this service's
-   * ExternalSecret, so the lane returned null and failed every caller. There is
-   * deliberately no fallback to that shared secret — it was one static value
-   * held by seven services with a self-asserted x-service-name header, the shape
-   * SERVICE_IDENTITY_CONSUMER_STANDARD.md prohibits, and catalog still accepts
-   * it, so a fallback would authenticate successfully and hide the regression.
-   */
+  /** S2S: auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md */
   private getCatalogInternalServiceHeaders(): Record<string, string> | null {
     const pairToken = (process.env.CATALOG_SERVICE_TOKEN || '').trim();
 
