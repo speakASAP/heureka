@@ -69,6 +69,14 @@ spec:
                 secretKeyRef:
                   name: heureka-service-secret
                   key: CATALOG_SERVICE_TOKEN
+            # S2S: auth-microservice/docs/SERVICE_IDENTITY_CONSUMER_STANDARD.md
+            # envFrom is not used for this Secret, so the ExternalSecret entry
+            # alone does NOT reach the container -- it must be named here.
+            - name: LOGGING_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: heureka-service-secret
+                  key: LOGGING_SERVICE_TOKEN
           startupProbe:
             httpGet:
               path: /health
